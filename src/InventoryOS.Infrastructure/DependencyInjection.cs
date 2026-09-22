@@ -1,4 +1,5 @@
 using InventoryOS.Application.Interfaces;
+using InventoryOS.Application.Options;
 using InventoryOS.Infrastructure.Identity;
 using InventoryOS.Infrastructure.MultiTenancy;
 using InventoryOS.Infrastructure.Persistence;
@@ -15,27 +16,27 @@ public static class DependencyInjection
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        // Connection string configuration
         var connectionString = configuration.GetConnectionString("DefaultConnection")
             ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
-        // DbContext registration with PostgreSQL provider
+        services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.SectionName));
+
         services.AddDbContext<ApplicationDbContext>(options =>
             options.UseNpgsql(
                 connectionString,
                 b => b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName)));
 
-        // HTTP Context Accessor
         services.AddHttpContextAccessor();
 
-        // Multi-tenancy & Identity services (Scoped per request)
         services.AddScoped<ICurrentTenantService, CurrentTenantService>();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
+        services.AddScoped<IPasswordHasherService, PasswordHasherService>();
+        services.AddScoped<ITokenService, TokenService>();
 
-        // Repositories & Unit of Work (Scoped)
         services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
         services.AddScoped<IProductRepository, ProductRepository>();
         services.AddScoped<IOrderRepository, OrderRepository>();
+        services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         return services;

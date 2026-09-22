@@ -1,22 +1,18 @@
 using InventoryOS.Api.Extensions;
+using InventoryOS.Api.Middleware;
 using InventoryOS.Application;
 using InventoryOS.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container
 builder.Services.AddProblemDetails();
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
-// Register Clean Architecture layers
 builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructureServices(builder.Configuration);
-
-// Authentication & Authorization (JWT)
 builder.Services.AddJwtAuthentication(builder.Configuration);
 
-// CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("DefaultCorsPolicy", policy =>
@@ -29,32 +25,32 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline per Docs/Rules & Coding Standards.md
-// 1. Exception Handling (outermost)
+// 1. Exception handling (outermost) — Docs/Rules & Coding Standards.md
+app.UseMiddleware<ExceptionHandlingMiddleware>();
+
 if (app.Environment.IsDevelopment())
 {
-    app.UseDeveloperExceptionPage();
     app.MapOpenApi();
 }
-else
-{
-    app.UseExceptionHandler();
-}
 
-// 2. HTTPS Redirection
+// 2. HTTPS
 app.UseHttpsRedirection();
 
 // 3. CORS
 app.UseCors("DefaultCorsPolicy");
 
-// 4. Authentication & Authorization
+// 4. Authentication
 app.UseAuthentication();
+
+// 5. Tenant resolution (JWT claims → ICurrentTenantService)
+app.UseMiddleware<TenantResolutionMiddleware>();
+
+// 6. Authorization
 app.UseAuthorization();
 
-// 5. Endpoint Routing & Controllers
+// 7. Controllers
 app.MapControllers();
 
-// Health check endpoints (Docs/PRD.md)
 app.MapGet("/health", () => Results.Ok(new { status = "Healthy", timestamp = DateTime.UtcNow }));
 app.MapGet("/health/ready", () => Results.Ok(new { status = "Ready", timestamp = DateTime.UtcNow }));
 

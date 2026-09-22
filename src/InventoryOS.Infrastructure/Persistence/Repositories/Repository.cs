@@ -19,6 +19,7 @@ public class Repository<T> : IRepository<T> where T : BaseEntity
 
     public virtual async Task<T?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
+        // Tracked: used for update/delete paths. List/Find queries use AsNoTracking.
         return await _dbSet.FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
     }
 

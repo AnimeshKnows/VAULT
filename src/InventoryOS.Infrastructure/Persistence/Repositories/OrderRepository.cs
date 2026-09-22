@@ -23,6 +23,7 @@ public class OrderRepository : Repository<Order>, IOrderRepository
     public async Task<Order?> GetByOrderNumberAsync(string orderNumber, CancellationToken cancellationToken = default)
     {
         return await _dbSet
+            .AsNoTracking()
             .Include(o => o.Items)
             .FirstOrDefaultAsync(o => o.OrderNumber.ToLower() == orderNumber.ToLower(), cancellationToken);
     }

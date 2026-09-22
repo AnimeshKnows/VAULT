@@ -6,6 +6,7 @@ public interface IUnitOfWork : IDisposable
 {
     IProductRepository Products { get; }
     IOrderRepository Orders { get; }
+    IUserRepository Users { get; }
     IRepository<T> Repository<T>() where T : BaseEntity;
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);

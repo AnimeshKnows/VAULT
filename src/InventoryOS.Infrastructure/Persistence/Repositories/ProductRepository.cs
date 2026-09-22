@@ -14,6 +14,7 @@ public class ProductRepository : Repository<Product>, IProductRepository
     public async Task<Product?> GetBySkuAsync(string sku, CancellationToken cancellationToken = default)
     {
         return await _dbSet
+            .AsNoTracking()
             .FirstOrDefaultAsync(p => p.Sku.ToLower() == sku.ToLower(), cancellationToken);
     }
 

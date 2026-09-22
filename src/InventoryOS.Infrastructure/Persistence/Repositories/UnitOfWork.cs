@@ -17,15 +17,18 @@ public class UnitOfWork : IUnitOfWork
     public UnitOfWork(
         ApplicationDbContext context,
         IProductRepository productRepository,
-        IOrderRepository orderRepository)
+        IOrderRepository orderRepository,
+        IUserRepository userRepository)
     {
         _context = context;
         Products = productRepository;
         Orders = orderRepository;
+        Users = userRepository;
     }
 
     public IProductRepository Products { get; }
     public IOrderRepository Orders { get; }
+    public IUserRepository Users { get; }
 
     public IRepository<T> Repository<T>() where T : BaseEntity
     {
