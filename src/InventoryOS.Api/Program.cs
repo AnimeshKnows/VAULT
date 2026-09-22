@@ -55,3 +55,6 @@ app.MapGet("/health", () => Results.Ok(new { status = "Healthy", timestamp = Dat
 app.MapGet("/health/ready", () => Results.Ok(new { status = "Ready", timestamp = DateTime.UtcNow }));
 
 app.Run();
+
+// Expose entry point for WebApplicationFactory integration tests
+public partial class Program;
