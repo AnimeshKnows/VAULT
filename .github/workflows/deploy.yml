@@ -1,0 +1,18 @@
+name: Deploy
+
+# Alias entry point — full pipeline lives in ci-cd.yml (build, test, migrate, Azure deploy).
+# Kept so Docs/Progress_Log and callers expecting deploy.yml resolve to the same workflow.
+on:
+  workflow_dispatch:
+
+jobs:
+  trigger-note:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Use ci-cd.yml
+        run: |
+          echo "Primary CI/CD workflow is .github/workflows/ci-cd.yml"
+          echo "Push to main runs build → test → migrate → Azure App Service deploy."
+          echo "Configure secrets: PROD_CONNECTION_STRING, AZURE_WEBAPP_PUBLISH_PROFILE"
+          echo "Configure vars (optional): AZURE_WEBAPP_NAME"
+          echo "For Render: connect repo in dashboard; set the same env vars; health path /health/ready"

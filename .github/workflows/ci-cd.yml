@@ -1,0 +1,102 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  DOTNET_VERSION: "10.0.x"
+  AZURE_WEBAPP_NAME: inventoryos-api
+
+jobs:
+  build-and-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore
+        run: dotnet restore InventoryOS.sln
+
+      - name: Build
+        run: dotnet build InventoryOS.sln --no-restore -c Release
+
+      - name: Test
+        run: dotnet test InventoryOS.sln --no-build -c Release --logger "trx" --results-directory ./TestResults
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: ./TestResults
+          if-no-files-found: ignore
+
+  migrate:
+    name: EF Core Migrate (Production)
+    needs: build-and-test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Install dotnet-ef
+        run: dotnet tool install --global dotnet-ef --version 10.0.12
+
+      - name: Apply EF Core migrations
+        env:
+          ConnectionStrings__DefaultConnection: ${{ secrets.PROD_CONNECTION_STRING }}
+        run: |
+          if [ -z "$ConnectionStrings__DefaultConnection" ]; then
+            echo "PROD_CONNECTION_STRING secret is not set — skipping migrate. Configure the secret before first Production deploy."
+            exit 1
+          fi
+          # Option A (Docs/Deployment Plan.md): explicit migrate before app deploy — avoids multi-instance race on startup
+          dotnet ef database update \
+            --project src/InventoryOS.Infrastructure \
+            --startup-project src/InventoryOS.Api \
+            --connection "$ConnectionStrings__DefaultConnection"
+
+  deploy-azure:
+    name: Deploy to Azure App Service
+    needs: [build-and-test, migrate]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Publish API
+        run: dotnet publish src/InventoryOS.Api -c Release -o ./publish
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ vars.AZURE_WEBAPP_NAME || 'inventoryos-api' }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: ./publish
+
+  # Render alternative: connect the GitHub repo in Render Dashboard (Docker runtime).
+  # Render auto-deploys on push to main — no explicit deploy step required.
+  # Set Render env vars: ConnectionStrings__DefaultConnection, Jwt__Key, Jwt__Issuer,
+  # Jwt__Audience, AllowedOrigins, ASPNETCORE_ENVIRONMENT=Production
+  # Health check path: /health/ready
+  # Still run the migrate job above (or a one-off Render job) before traffic hits new schema.

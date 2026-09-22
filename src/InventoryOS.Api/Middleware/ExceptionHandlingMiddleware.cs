@@ -54,9 +54,7 @@ public sealed class ExceptionHandlingMiddleware
         {
             Status = status,
             Title = title,
-            Detail = status >= 500 && !_environment.IsDevelopment()
-                ? "An unexpected error occurred."
-                : exception.Message,
+            Detail = ResolveDetail(exception, status),
             Instance = context.Request.Path
         };
 
@@ -68,6 +66,32 @@ public sealed class ExceptionHandlingMiddleware
         context.Response.ContentType = "application/problem+json";
         context.Response.StatusCode = status;
         await context.Response.WriteAsJsonAsync(problem);
+    }
+
+    /// <summary>
+    /// Development may return exception messages for debugging.
+    /// Non-Development returns messages only for intentional domain/validation failures;
+    /// unexpected errors always get a sanitized generic detail (no stack traces / system messages).
+    /// </summary>
+    private string ResolveDetail(Exception exception, int status)
+    {
+        if (_environment.IsDevelopment())
+        {
+            return exception.Message;
+        }
+
+        if (status >= (int)HttpStatusCode.InternalServerError)
+        {
+            return "An unexpected error occurred.";
+        }
+
+        return exception switch
+        {
+            NotFoundException or DomainValidationException or ConflictException
+                or UnauthorizedException or UnauthorizedAccessException
+                or FluentValidation.ValidationException => exception.Message,
+            _ => "An unexpected error occurred."
+        };
     }
 
     private static (int Status, string Title, IDictionary<string, string[]>? Errors) MapException(Exception exception)

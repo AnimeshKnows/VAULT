@@ -44,6 +44,8 @@ public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
         builder.UseSetting("Jwt:Key", JwtKey);
         builder.UseSetting("Jwt:AccessTokenExpirationMinutes", "60");
         builder.UseSetting("Jwt:RefreshTokenExpirationDays", "7");
+        builder.UseSetting("AllowedOrigins", "http://localhost:3000");
+        builder.UseSetting("AllowedHosts", "localhost;127.0.0.1");
 
         builder.ConfigureTestServices(services =>
         {

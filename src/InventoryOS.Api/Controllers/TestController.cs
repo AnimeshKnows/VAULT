@@ -1,3 +1,4 @@
+#if DEBUG
 using InventoryOS.Api.Authorization;
 using InventoryOS.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -7,7 +8,7 @@ namespace InventoryOS.Api.Controllers;
 
 /// <summary>
 /// Secured endpoints used to verify JWT authentication, RBAC policies,
-/// and tenant resolution middleware wiring.
+/// and tenant resolution middleware wiring. Debug builds only.
 /// </summary>
 [ApiController]
 [Route("api/test")]
@@ -74,3 +75,4 @@ public sealed class TestController : ControllerBase
         });
     }
 }
+#endif

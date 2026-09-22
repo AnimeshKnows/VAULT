@@ -489,10 +489,15 @@ $RECYCLE.BIN/
 # Project documentation (kept locally, not in source control)
 Docs/
 
-# ASP.NET Core environment-specific settings with real secrets
+# ASP.NET Core environment-specific settings — keep secrets out of git
 appsettings.Development.json
 appsettings.*.json
 !appsettings.json
+# Production placeholders only (empty secrets; real values via host env / Key Vault)
+!appsettings.Production.json
+
+# Local Serilog file sink output (under Api project)
+**/logs/
 
 # Explicit build output safety-net (redundant but explicit)
 bin/

@@ -1,0 +1,10 @@
+# Ignore Docker build context noise
+**/.git
+**/bin
+**/obj
+**/logs
+**/.vs
+**/Docs
+**/.obsidian
+**/tests
+**/node_modules
