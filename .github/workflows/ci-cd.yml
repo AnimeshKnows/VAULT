@@ -61,10 +61,11 @@ jobs:
           ConnectionStrings__DefaultConnection: ${{ secrets.PROD_CONNECTION_STRING }}
         run: |
           if [ -z "$ConnectionStrings__DefaultConnection" ]; then
-            echo "PROD_CONNECTION_STRING secret is not set — skipping migrate. Configure the secret before first Production deploy."
-            exit 1
+            echo "::warning::PROD_CONNECTION_STRING secret is not set — skipping migrate."
+            echo "Add Repository or Environment (production) secret PROD_CONNECTION_STRING before first Production deploy."
+            exit 0
           fi
-          # Option A (Docs/Deployment Plan.md): explicit migrate before app deploy — avoids multi-instance race on startup
+          # Option A: explicit migrate before app deploy — avoids multi-instance race on startup
           dotnet ef database update \
             --project src/InventoryOS.Infrastructure \
             --startup-project src/InventoryOS.Api \
@@ -77,17 +78,33 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     steps:
+      - name: Check deploy secrets
+        id: gate
+        env:
+          PUBLISH_PROFILE: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+        run: |
+          if [ -z "$PUBLISH_PROFILE" ]; then
+            echo "::warning::AZURE_WEBAPP_PUBLISH_PROFILE secret is not set — skipping Azure deploy."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/checkout@v4
+        if: steps.gate.outputs.skip != 'true'
 
       - name: Setup .NET
+        if: steps.gate.outputs.skip != 'true'
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Publish API
+        if: steps.gate.outputs.skip != 'true'
         run: dotnet publish src/InventoryOS.Api -c Release -o ./publish
 
       - name: Deploy to Azure Web App
+        if: steps.gate.outputs.skip != 'true'
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ vars.AZURE_WEBAPP_NAME || 'inventoryos-api' }}
