@@ -502,3 +502,6 @@ appsettings.*.json
 # Explicit build output safety-net (redundant but explicit)
 bin/
 obj/
+
+# Local / CI test result artifacts
+TestResults/

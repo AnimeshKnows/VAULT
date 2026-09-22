@@ -43,8 +43,10 @@ public class AuthEndpointTests : IClassFixture<CustomWebApplicationFactory>
     }
 
     [Fact]
-    public async Task GetAdminProbe_WithStaffRole_ReturnsForbidden()
+    public async Task CancelOrder_WithStaffRole_ReturnsForbidden()
     {
+        // OrdersController is Staff+Admin, but Cancel requires RequireAdmin.
+        // Uses a production endpoint so Release CI (no Debug-only TestController) still validates RBAC.
         await _factory.SeedAsync();
         var client = _factory.CreateAuthenticatedClient(
             _factory.TenantAUserId,
@@ -52,7 +54,7 @@ public class AuthEndpointTests : IClassFixture<CustomWebApplicationFactory>
             "Staff",
             "staff-a@test.com");
 
-        var response = await client.GetAsync("/api/test/admin");
+        var response = await client.DeleteAsync($"/api/orders/{Guid.NewGuid()}");
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
