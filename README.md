@@ -56,8 +56,8 @@ InventoryOS.sln
 ### 1. Clone and restore
 
 ```bash
-git clone https://github.com/AnimeshKnows/MIM.git
-cd MIM
+git clone https://github.com/AnimeshKnows/VAULT.git
+cd VAULT
 dotnet restore InventoryOS.sln
 ```
 
