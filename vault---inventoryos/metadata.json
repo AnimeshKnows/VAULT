@@ -1,0 +1,6 @@
+{
+  "name": "VAULT - InventoryOS",
+  "description": "High-precision, multi-tenant inventory & order management platform engineered to unify high-frequency SKU logistics, stock adjustments, and multi-channel orders on an immutable ledger.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

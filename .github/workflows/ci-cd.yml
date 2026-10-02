@@ -10,6 +10,10 @@ env:
   DOTNET_VERSION: "10.0.x"
   AZURE_WEBAPP_NAME: inventoryos-api
 
+defaults:
+  run:
+    working-directory: backend
+
 jobs:
   build-and-test:
     name: Build & Test
@@ -36,7 +40,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-results
-          path: ./TestResults
+          path: backend/TestResults
           if-no-files-found: ignore
 
   migrate:
@@ -55,6 +59,7 @@ jobs:
 
       - name: Install dotnet-ef
         run: dotnet tool install --global dotnet-ef --version 10.0.12
+        working-directory: .
 
       - name: Apply EF Core migrations
         env:
@@ -80,6 +85,7 @@ jobs:
     steps:
       - name: Check deploy secrets
         id: gate
+        working-directory: .
         env:
           PUBLISH_PROFILE: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
         run: |
@@ -109,9 +115,10 @@ jobs:
         with:
           app-name: ${{ vars.AZURE_WEBAPP_NAME || 'inventoryos-api' }}
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-          package: ./publish
+          package: backend/publish
 
   # Render alternative: connect the GitHub repo in Render Dashboard (Docker runtime).
+  # Dockerfile path: backend/Dockerfile (set Root Directory / Dockerfile Path to backend).
   # Render auto-deploys on push to main — no explicit deploy step required.
   # Set Render env vars: ConnectionStrings__DefaultConnection, Jwt__Key, Jwt__Issuer,
   # Jwt__Audience, AllowedOrigins, ASPNETCORE_ENVIRONMENT=Production
