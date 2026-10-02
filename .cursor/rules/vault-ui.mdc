@@ -1,0 +1,59 @@
+---
+description: VAULT app UI tokens and patterns for the private-workspace frontend
+globs: vault---private-workspace-inventory-and-order-platform/**/*.{ts,tsx,css}
+alwaysApply: false
+---
+
+# VAULT UI (app edition)
+
+Authenticated workspace UI lives in `vault---private-workspace-inventory-and-order-platform/`.
+Public landing + login/signup already exist — restyle the **app shell and data pages** to match this system.
+
+## Tokens (from `src/index.css` / Tailwind theme)
+
+| Role | Value |
+|------|-------|
+| Base | `#141414` → `bg-vault-base` |
+| Surface | `#1B1B1B` → `bg-vault-surface` |
+| Raised | `#232323` → `bg-vault-raised` |
+| Hairline / strong border | `border-vault-hairline` / `border-vault-border` |
+| Text | `text-vault-text` `#F4F6F4`, secondary `#A9AFA9`, muted `#7C827C` |
+| Accent | `text-vault-amber` / `bg-vault-amber` `#FFB020` only |
+| Status | success `#34D399`, info `#22D3EE`, danger `#F87171` — always with label + icon |
+
+Wrap authenticated routes in `.vault-app`. Prefer theme utilities over raw hex.
+
+## Type
+
+- Geist (`font-sans`) for headings/body; slight negative tracking on large titles
+- JetBrains Mono (`font-mono`), uppercase, small — labels, table headers, section tags, badges, buttons, numeric captions
+- Tabular nums for quantities, prices, totals (`tabular-nums` / `formatMoney`)
+
+## Currency
+
+Use `src/lib/format.ts` — **INR** (`en-IN`). Do not hardcode `₹` formats elsewhere.
+
+## Primitives
+
+Import from `src/components/ui` — Button, IconButton, Card, SectionTag, PageHeader, Badge, StatusPill, Input, Select, Textarea, Modal, Drawer, Table, EmptyState, Skeleton, Toast/ToastProvider, ConfirmDialog, Stat, Tabs.
+
+Page headers: boxed SectionTag (`S.01 OVERVIEW` … `S.07 WORKSPACE`) + large title + one-line description.
+
+## Icons
+
+Prefer **Material Symbols** (`material-symbols-outlined`). Use `lucide-react` only when Material Symbols lacks a glyph (e.g. arrow chip on Button).
+
+## Motion
+
+Use `motion` quietly: page enter 200ms opacity + 12px rise; drawers 280ms from right; modals scale 0.97; stagger lists 30ms on first load only. Animate **transform/opacity only**. Respect `prefers-reduced-motion` (see `prefersReducedMotion()` in `src/lib/cn.ts`).
+
+## API / auth hard rules
+
+- Do not change backend, request/response shapes, token keys (`vault.accessToken`, `vault.user`, `vault.tenantId`), or 401 single-flight refresh.
+- No invented API fields. Skip UI if the type does not exist.
+- No Redux/Zustand. Context + hooks only. No `any`. No new packages.
+- Staff must not see Users nav, Delete product, or Cancel order. Gate `/users` with redirect + toast.
+
+## Phases
+
+Work in phases; typecheck + build after each. Stop and wait for “next” between phases.

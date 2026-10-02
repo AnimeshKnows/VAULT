@@ -1,0 +1,230 @@
+@import "tailwindcss";
+
+/* ── VAULT design tokens (app edition) ─────────────────────────────── */
+@theme {
+  --font-sans: 'Geist', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  --color-vault-base: #141414;
+  --color-vault-surface: #1b1b1b;
+  --color-vault-raised: #232323;
+  --color-vault-hairline: rgba(255, 255, 255, 0.08);
+  --color-vault-border: rgba(255, 255, 255, 0.16);
+
+  --color-vault-text: #f4f6f4;
+  --color-vault-secondary: #a9afa9;
+  --color-vault-muted: #7c827c;
+
+  --color-vault-amber: #ffb020;
+  --color-vault-success: #34d399;
+  --color-vault-info: #22d3ee;
+  --color-vault-danger: #f87171;
+
+  /* Marketing / public site (unchanged) */
+  --color-vault-public-bg: #ecefec;
+  --color-vault-public-dark: #141414;
+}
+
+@layer base {
+  :root {
+    --vault-dark: #141414;
+    --vault-bg: #ecefec;
+    --vault-white: #ffffff;
+    --vault-amber: #ffb020;
+
+    --vault-app-base: #141414;
+    --vault-app-surface: #1b1b1b;
+    --vault-app-raised: #232323;
+    --vault-app-hairline: rgba(255, 255, 255, 0.08);
+    --vault-app-border: rgba(255, 255, 255, 0.16);
+    --vault-app-text: #f4f6f4;
+    --vault-app-secondary: #a9afa9;
+    --vault-app-muted: #7c827c;
+    --vault-app-amber: #ffb020;
+    --vault-app-success: #34d399;
+    --vault-app-info: #22d3ee;
+    --vault-app-danger: #f87171;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background-color: var(--vault-bg);
+    color: var(--vault-dark);
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+  }
+
+  code,
+  pre,
+  .font-mono {
+    font-family: var(--font-mono);
+  }
+
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* App shell root — dark canvas for authenticated routes */
+.vault-app {
+  background-color: var(--vault-app-base);
+  color: var(--vault-app-text);
+  font-family: var(--font-sans);
+  min-height: 100vh;
+}
+
+.vault-app ::selection {
+  background-color: var(--vault-app-amber);
+  color: var(--vault-app-base);
+}
+
+/* Focus ring utility for primitives */
+.vault-focus:focus-visible {
+  outline: 2px solid var(--vault-app-amber);
+  outline-offset: 2px;
+}
+
+/* Custom scrollbar (public light) */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #ecefec;
+}
+::-webkit-scrollbar-thumb {
+  background: #141414;
+  border-radius: 3px;
+}
+
+.vault-app ::-webkit-scrollbar-track {
+  background: #1b1b1b;
+}
+.vault-app ::-webkit-scrollbar-thumb {
+  background: #3a3a3a;
+}
+.vault-app ::-webkit-scrollbar-thumb:hover {
+  background: #4a4a4a;
+}
+
+/* Dotted vertical guidelines (marketing) */
+.dotted-guide {
+  background-image: radial-gradient(circle, #737373 1px, transparent 1px);
+  background-size: 1px 12px;
+}
+
+/* Auth Screens Keyframe Animations */
+@keyframes ambientSweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-ambient-sweep {
+  animation: ambientSweep 8s ease-in-out infinite;
+}
+
+@keyframes shutterShake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  15% {
+    transform: translateX(-9px);
+  }
+  30% {
+    transform: translateX(8px);
+  }
+  45% {
+    transform: translateX(-6px);
+  }
+  60% {
+    transform: translateX(6px);
+  }
+  75% {
+    transform: translateX(-3px);
+  }
+  90% {
+    transform: translateX(2px);
+  }
+}
+
+.animate-shutter-shake {
+  animation: shutterShake 0.6s ease-in-out;
+}
+
+@keyframes scanBeam {
+  0% {
+    top: 0%;
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    top: 100%;
+    opacity: 0;
+  }
+}
+
+.animate-scan-beam {
+  animation: scanBeam 1.8s ease-in-out infinite;
+}
+
+@keyframes spinSlow {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-slow {
+  animation: spinSlow 3s linear infinite;
+}
+
+@keyframes vault-skeleton {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+.vault-skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.04) 100%
+  );
+  background-size: 200% 100%;
+  animation: vault-skeleton 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .vault-skeleton {
+    animation: none;
+  }
+}

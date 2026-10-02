@@ -1,0 +1,6 @@
+{
+  "name": "VAULT — Private Workspace Inventory and Order Platform",
+  "description": "Inventory and order platform for small and mid-sized businesses. Every company works in its own private workspace.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
