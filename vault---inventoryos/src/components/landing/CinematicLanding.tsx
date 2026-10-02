@@ -1,19 +1,30 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { NavigationPage } from '../../types';
-import { VAULT_LOGO_URL, CURRENT_USER_AVATAR } from '../../data/mockData';
+import { VAULT_LOGO_URL } from '../../data/mockData';
 
 interface CinematicLandingProps {
   onNavigate: (page: NavigationPage) => void;
   onSceneChange?: (sceneIndex: number) => void;
+  isLoggedIn?: boolean;
+  userInitials?: string;
 }
 
 export const CinematicLanding: React.FC<CinematicLandingProps> = ({
   onNavigate,
   onSceneChange,
+  isLoggedIn = false,
+  userInitials = 'IN',
 }) => {
   const [activeScene, setActiveScene] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const [selectedModule, setSelectedModule] = useState(0);
+  const [exitingScene, setExitingScene] = useState<number | null>(null);
+  const [carouselIndex, setCarouselIndex] = useState(0);
+  const [carouselPaused, setCarouselPaused] = useState(false);
+  const [dragOffsetPx, setDragOffsetPx] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const carouselResumeAt = useRef(0);
+  const dragStartX = useRef(0);
+  const dragActive = useRef(false);
 
   // Wheel accumulation for natural, butter-smooth inertial trackpad & mouse scrolling
   const wheelAccumulator = useRef(0);
@@ -23,12 +34,118 @@ export const CinematicLanding: React.FC<CinematicLandingProps> = ({
 
   const totalScenes = 4;
 
-  const scenesMeta = [
-    { id: 'deck', title: 'Command Deck', code: 'SCENE // 01', subtitle: 'Live Node Telemetry', accent: '#5356ff' },
-    { id: 'modules', title: 'Architecture', code: 'SCENE // 02', subtitle: 'Distributed Core Engine', accent: '#a855f7' },
-    { id: 'physical', title: 'Consensus', code: 'SCENE // 03', subtitle: 'Physical Warehouse Sync', accent: '#10B981' },
-    { id: 'gateway', title: 'Access Portal', code: 'SCENE // 04', subtitle: 'Tenant Unit Deployment', accent: '#82cfff' },
-  ];
+  const featureCards = [
+    {
+      id: 'products',
+      title: 'Manage Products & SKUs',
+      desc: 'Variant matrices, multi-warehouse bins, and serial numbers. Automated reorder triggers notify procurement.',
+      icon: 'inventory_2',
+      accent: '#5356ff',
+      statLabel: 'Active Catalog',
+      statVal: '14,280 SKUs',
+    },
+    {
+      id: 'orders',
+      title: 'Process Orders Seamlessly',
+      desc: 'From draft reservation to pick, pack, and automated dispatch. Never double-commit stock during demand surges.',
+      icon: 'receipt_long',
+      accent: '#82cfff',
+      statLabel: 'Order Lifecycle',
+      statVal: 'Draft → Shipped',
+    },
+    {
+      id: 'security',
+      title: 'Secure & Multi-Tenant',
+      desc: 'Complete physical and logical workspace isolation per tenant. Role-based granular permissions at row level.',
+      icon: 'hub',
+      accent: '#a855f7',
+      statLabel: 'Encryption',
+      statVal: 'AES-256 GCM',
+    },
+    {
+      id: 'stock',
+      title: 'Stock Adjustments',
+      desc: 'Cycle counts, damage write-offs, and inbound receipts with full audit history on every mutation.',
+      icon: 'tune',
+      accent: '#10B981',
+      statLabel: 'Audit Trail',
+      statVal: 'Immutable Log',
+    },
+    {
+      id: 'reports',
+      title: 'Live Reports & Valuation',
+      desc: 'Revenue, order volume, and stock valuation aggregates update as your catalog and orders change.',
+      icon: 'analytics',
+      accent: '#F59E0B',
+      statLabel: 'Insight Latency',
+      statVal: '< 100ms',
+    },
+    {
+      id: 'team',
+      title: 'Team Access Control',
+      desc: 'Invite Admin and Staff roles, deactivate access instantly, and keep every action attributable.',
+      icon: 'group',
+      accent: '#06B6D4',
+      statLabel: 'RBAC Roles',
+      statVal: 'Admin · Staff',
+    },
+  ] as const;
+
+  const carouselVisible = 3;
+  const carouselLoop = [...featureCards, ...featureCards];
+
+  const goToCarousel = (index: number) => {
+    const next = ((index % featureCards.length) + featureCards.length) % featureCards.length;
+    setCarouselIndex(next);
+    carouselResumeAt.current = Date.now() + 3200;
+  };
+
+  const onCarouselPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    dragActive.current = true;
+    dragStartX.current = e.clientX;
+    setIsDragging(true);
+    setCarouselPaused(true);
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+
+  const onCarouselPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragActive.current) return;
+    setDragOffsetPx(e.clientX - dragStartX.current);
+  };
+
+  const onCarouselPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragActive.current) return;
+    dragActive.current = false;
+    setIsDragging(false);
+    setCarouselPaused(false);
+
+    const delta = e.clientX - dragStartX.current;
+    setDragOffsetPx(0);
+
+    const threshold = 56;
+    if (delta <= -threshold) {
+      goToCarousel(carouselIndex + 1);
+    } else if (delta >= threshold) {
+      goToCarousel(carouselIndex - 1);
+    } else {
+      carouselResumeAt.current = Date.now() + 1800;
+    }
+
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {
+      // ignore
+    }
+  };
+
+  useEffect(() => {
+    if (activeScene !== 1 || carouselPaused) return;
+    const timer = window.setInterval(() => {
+      if (Date.now() < carouselResumeAt.current) return;
+      setCarouselIndex((prev) => (prev + 1) % featureCards.length);
+    }, 2000);
+    return () => window.clearInterval(timer);
+  }, [activeScene, carouselPaused, featureCards.length]);
 
   const goToScene = (index: number) => {
     if (index < 0 || index >= totalScenes || index === activeScene) return;
@@ -39,12 +156,23 @@ export const CinematicLanding: React.FC<CinematicLandingProps> = ({
 
     lastTransitionTime.current = now;
     setIsTransitioning(true);
+    setExitingScene(activeScene);
     setActiveScene(index);
     if (onSceneChange) onSceneChange(index);
+
+    window.setTimeout(() => {
+      setExitingScene(null);
+    }, 320);
 
     setTimeout(() => {
       setIsTransitioning(false);
     }, 850);
+  };
+
+  const sceneRevealClass = (sceneIndex: number) => {
+    if (activeScene === sceneIndex) return 'reveal-scene is-active';
+    if (exitingScene === sceneIndex) return 'reveal-scene is-exiting';
+    return 'reveal-scene';
   };
 
   // Continuous wheel accumulator decay for smooth trackpad experience
@@ -134,57 +262,41 @@ export const CinematicLanding: React.FC<CinematicLandingProps> = ({
       {/* ========================================================================= */}
       <header className="fixed top-0 left-0 right-0 h-16 bg-[#080B11]/70 backdrop-blur-2xl z-50 px-6 sm:px-12 flex items-center justify-between border-b border-white/10 shadow-[0_4px_30px_rgba(0,0,0,0.5)]">
         <div className="flex items-center gap-3 cursor-pointer" onClick={() => goToScene(0)}>
-          <img src={VAULT_LOGO_URL} alt="VAULT Logo" className="h-7 w-auto object-contain drop-shadow-[0_0_12px_rgba(83,86,255,0.6)]" />
+          <img src={VAULT_LOGO_URL} alt="VAULT" className="h-8 w-8 object-contain drop-shadow-[0_0_12px_rgba(83,86,255,0.6)]" />
           <div className="flex flex-col">
             <span className="font-semibold text-lg text-[#F1F5F9] tracking-tight leading-tight">VAULT</span>
-            <span className="text-[10px] font-mono tracking-widest text-[#c0c1ff]">INVENTORYOS</span>
+            <span className="text-[11px] font-medium tracking-wide text-[#94A3B8] leading-none">InventoryOS</span>
           </div>
-        </div>
-
-        {/* Scene Indicator in HUD with smooth transition */}
-        <div className="hidden md:flex items-center gap-6 text-xs font-mono">
-          {scenesMeta.map((sc, idx) => (
-            <button
-              key={sc.id}
-              onClick={() => goToScene(idx)}
-              className={`flex items-center gap-2 py-1 transition-all duration-300 cursor-pointer ${
-                activeScene === idx
-                  ? 'text-white font-bold border-b-2 border-[#5356ff] translate-y-[-1px]'
-                  : 'text-[#94A3B8] hover:text-white'
-              }`}
-            >
-              <span>{sc.code}</span>
-              <span className="hidden lg:inline text-[#64748B]">/ {sc.title}</span>
-            </button>
-          ))}
         </div>
 
         <div className="flex items-center gap-3">
           <button
             onClick={() => onNavigate('login')}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono text-[#c0c1ff] hover:text-white bg-white/[0.04] hover:bg-white/[0.08] transition-all border border-white/15 cursor-pointer backdrop-blur-md shadow-sm"
-            title="Enter through the Locked Shutter"
+            className="btn-hover flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium text-[#c0c1ff] hover:text-white bg-white/[0.04] hover:bg-white/[0.1] border border-white/15 cursor-pointer backdrop-blur-md shadow-sm hover:shadow-[0_8px_24px_rgba(0,0,0,0.35)]"
+            title="Log in"
           >
-            <span className="material-symbols-outlined text-[15px]">lock</span>
-            <span>Locked Shutter</span>
+            <span className="material-symbols-outlined text-[18px]">lock</span>
+            <span>Log in</span>
           </button>
 
           <button
             onClick={() => onNavigate('signup')}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#5356ff] to-[#4142ee] hover:from-[#6467ff] hover:to-[#5152fa] text-white text-xs font-medium shadow-[0_0_20px_rgba(83,86,255,0.45)] hover:shadow-[0_0_28px_rgba(83,86,255,0.65)] transition-all cursor-pointer border border-white/15"
-            title="Register and get assigned an apartment unit"
+            className="btn-hover flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#5356ff] to-[#4142ee] hover:from-[#6467ff] hover:to-[#5152fa] text-white text-sm font-medium shadow-[0_0_20px_rgba(83,86,255,0.45)] hover:shadow-[0_0_32px_rgba(83,86,255,0.7)] cursor-pointer border border-white/15"
+            title="Sign up"
           >
-            <span className="material-symbols-outlined text-[15px]">apartment</span>
-            <span>Assign Unit</span>
+            <span className="material-symbols-outlined text-[18px]">apartment</span>
+            <span>Sign up</span>
           </button>
 
-          <button
-            onClick={() => onNavigate('dashboard')}
-            className="hidden sm:block ml-1 ring-1 ring-white/15 rounded-full hover:ring-[#5356ff] transition-all cursor-pointer shadow-md"
-            title="Launch Dashboard Console"
-          >
-            <img src={CURRENT_USER_AVATAR} alt="Avatar" className="w-8 h-8 rounded-full object-cover" />
-          </button>
+          {isLoggedIn && (
+            <button
+              onClick={() => onNavigate('dashboard')}
+              className="btn-hover hidden sm:flex ml-1 w-10 h-10 items-center justify-center rounded-full bg-[#5356ff]/25 text-[#c0c1ff] text-xs font-semibold ring-1 ring-white/15 hover:ring-[#5356ff] cursor-pointer shadow-md hover:shadow-[0_0_20px_rgba(83,86,255,0.45)]"
+              title="Open workspace"
+            >
+              {userInitials}
+            </button>
+          )}
         </div>
       </header>
 
@@ -196,141 +308,32 @@ export const CinematicLanding: React.FC<CinematicLandingProps> = ({
             SCENE 0: COMMAND DECK & HERO ENVIRONMENT
            ========================================================================= */}
         <div
-          className={`absolute inset-0 pt-16 px-6 sm:px-12 max-w-7xl mx-auto flex items-center transition-[opacity,transform,filter] duration-900 ease-[cubic-bezier(0.19,1,0.22,1)] will-change-[transform,opacity] transform-gpu ${
-            activeScene === 0
-              ? 'opacity-100 scale-100 translate-y-0 blur-0 pointer-events-auto'
-              : activeScene > 0
-              ? 'opacity-0 scale-[0.96] -translate-y-12 blur-[1.5px] pointer-events-none'
-              : 'opacity-0 scale-[1.04] translate-y-12 blur-[1.5px] pointer-events-none'
+          className={`absolute inset-0 pt-16 px-6 sm:px-12 max-w-7xl mx-auto flex items-center transition-opacity duration-500 ease-out will-change-[opacity] ${
+            activeScene === 0 || exitingScene === 0
+              ? 'opacity-100 pointer-events-auto'
+              : 'opacity-0 pointer-events-none'
           }`}
         >
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center w-full">
-            {/* Left Hero Text */}
-            <div className="lg:col-span-7 flex flex-col items-start">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.05] border border-white/15 text-[11px] font-mono text-[#c0c1ff] mb-5 backdrop-blur-xl shadow-lg">
-                <span className="w-2 h-2 rounded-full bg-[#10B981] animate-ping" />
-                <span>UNIFIED MULTI-TENANT LOGISTICS LEDGER</span>
-              </div>
-
-              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-white leading-[1.12] mb-5">
+          <div className={`w-full max-w-3xl flex flex-col items-start ${sceneRevealClass(0)}`}>
+              <h1 className="reveal-item reveal-headline text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-white leading-[1.12] mb-5">
                 Inventory & Order Management for{' '}
                 <span className="bg-gradient-to-r from-[#c0c1ff] via-[#82cfff] to-[#5356ff] bg-clip-text text-transparent drop-shadow-[0_0_25px_rgba(83,86,255,0.4)]">
                   Modern Businesses
                 </span>
               </h1>
 
-              <p className="text-sm sm:text-base text-[#94A3B8] leading-relaxed mb-6 max-w-2xl">
-                VAULT unifies high-frequency SKU logistics, stock adjustments, and multi-channel fulfillment on an immutable ledger. Scroll or glide through scenes below.
+              <p className="reveal-item reveal-paragraph text-sm sm:text-base text-[#94A3B8] leading-relaxed mb-6 max-w-2xl">
+                VAULT unifies high-frequency SKU logistics, stock adjustments, and multi-channel fulfillment on an immutable ledger.
               </p>
 
-              {/* Action Buttons */}
-              <div className="flex flex-wrap items-center gap-3.5 mb-6">
+              <div className="reveal-item reveal-cta flex flex-wrap items-center gap-3.5 mb-6">
                 <button
                   onClick={() => onNavigate('login')}
-                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#5356ff] to-[#4142ee] hover:from-[#6467ff] hover:to-[#5152fa] text-white font-medium text-xs flex items-center gap-2 shadow-[0_0_20px_rgba(83,86,255,0.45)] hover:shadow-[0_0_30px_rgba(83,86,255,0.7)] transition-all cursor-pointer border border-white/15"
+                  className="btn-hover px-8 py-3.5 rounded-xl bg-gradient-to-r from-[#5356ff] to-[#4142ee] hover:from-[#6467ff] hover:to-[#5152fa] text-white font-semibold text-sm flex items-center gap-2 shadow-[0_0_24px_rgba(83,86,255,0.5)] hover:shadow-[0_0_40px_rgba(83,86,255,0.8)] cursor-pointer border border-white/15"
                 >
-                  <span className="material-symbols-outlined text-[16px]">lock_open</span>
-                  <span>Enter via Locked Shutter</span>
-                </button>
-
-                <button
-                  onClick={() => onNavigate('signup')}
-                  className="px-5 py-2.5 rounded-xl bg-black/40 hover:bg-black/60 border border-white/15 text-white font-medium text-xs flex items-center gap-2 transition-all cursor-pointer backdrop-blur-md shadow-md"
-                >
-                  <span className="material-symbols-outlined text-[16px] text-[#82cfff]">apartment</span>
-                  <span>Claim Building Unit</span>
-                </button>
-
-                <button
-                  onClick={() => goToScene(1)}
-                  className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-[#94A3B8] hover:text-white font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer border border-white/10"
-                >
-                  <span>Explore Architecture</span>
-                  <span className="material-symbols-outlined text-[14px]">arrow_downward</span>
+                  <span>Get Started</span>
                 </button>
               </div>
-
-              {/* Status Ticker */}
-              <div className="flex items-center gap-4 text-xs font-mono text-[#94A3B8]">
-                <span className="flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] shadow-[0_0_6px_#10B981]" />
-                  99.99% Ledger Consensus
-                </span>
-                <span className="text-white/20">/</span>
-                <span className="flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-[14px] text-[#82cfff]">sync</span>
-                  Zero-Drift Telemetry
-                </span>
-              </div>
-            </div>
-
-            {/* Right Live Node Card with Smooth Levitation */}
-            <div className="lg:col-span-5">
-              <div className="relative rounded-3xl bg-[#0E1424]/85 border border-white/15 backdrop-blur-2xl p-6 shadow-[0_25px_60px_rgba(0,0,0,0.85)] overflow-hidden animate-[float_7s_ease-in-out_infinite]">
-                <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-4">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-[#10B981] shadow-[0_0_8px_#10B981] animate-ping" />
-                    <span className="font-mono text-xs text-[#F1F5F9] font-bold">
-                      VAULT-NODE-01 // Acme Global Store
-                    </span>
-                  </div>
-                  <span className="font-mono text-[10px] px-2.5 py-0.5 rounded-full bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/30">
-                    LIVE SYNC
-                  </span>
-                </div>
-
-                {/* 2 Mini KPI Tiles */}
-                <div className="grid grid-cols-2 gap-3 mb-4">
-                  <div className="bg-black/35 p-3.5 rounded-2xl border border-white/10 backdrop-blur-sm">
-                    <span className="text-[10px] text-[#94A3B8] block">Total Orders</span>
-                    <div className="text-xl font-bold text-white mt-1 font-mono">124 (+12%)</div>
-                    <div className="mt-2.5 h-4 w-full">
-                      <svg className="w-full h-full" viewBox="0 0 100 20" preserveAspectRatio="none">
-                        <path
-                          d="M 0 16 Q 25 12 50 8 T 100 2"
-                          fill="none"
-                          stroke="#82cfff"
-                          strokeWidth="2.5"
-                          strokeLinecap="round"
-                        />
-                      </svg>
-                    </div>
-                  </div>
-
-                  <div className="bg-black/35 p-3.5 rounded-2xl border border-white/10 backdrop-blur-sm">
-                    <span className="text-[10px] text-[#94A3B8] block">Active SKUs</span>
-                    <div className="text-xl font-bold text-white mt-1 font-mono">356 (+8%)</div>
-                    <div className="mt-2.5 flex justify-between text-[10px] font-mono text-[#64748B]">
-                      <span>Capacity</span>
-                      <span className="text-white font-bold">84.2%</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Depletion Guard */}
-                <div className="bg-black/35 p-3.5 rounded-2xl border border-white/10 backdrop-blur-sm">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-[11px] font-semibold text-[#F59E0B] flex items-center gap-1.5">
-                      <span className="material-symbols-outlined text-[15px]">warning</span>
-                      Stock Depletion Guard
-                    </span>
-                    <span className="font-mono text-[9px] px-2 py-0.5 rounded-full bg-[#F59E0B]/20 text-[#F59E0B] border border-[#F59E0B]/30">
-                      3 CRITICAL
-                    </span>
-                  </div>
-                  <div className="space-y-1.5 text-[11px]">
-                    <div className="flex justify-between p-2 rounded-xl bg-black/40 border border-white/5 text-white">
-                      <span>Pro Studio Laptop M3</span>
-                      <span className="font-mono text-[#EF4444] font-bold">3 left</span>
-                    </div>
-                    <div className="flex justify-between p-2 rounded-xl bg-black/40 border border-white/5 text-white">
-                      <span>Zero-Lag Ergonomic Mouse</span>
-                      <span className="font-mono text-[#F59E0B] font-bold">5 left</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -338,100 +341,114 @@ export const CinematicLanding: React.FC<CinematicLandingProps> = ({
             SCENE 1: ARCHITECTURAL MODULES (Transformed Environment)
            ========================================================================= */}
         <div
-          className={`absolute inset-0 pt-16 px-6 sm:px-12 max-w-7xl mx-auto flex items-center transition-[opacity,transform,filter] duration-900 ease-[cubic-bezier(0.19,1,0.22,1)] will-change-[transform,opacity] transform-gpu ${
-            activeScene === 1
-              ? 'opacity-100 scale-100 translate-y-0 blur-0 pointer-events-auto'
-              : activeScene > 1
-              ? 'opacity-0 scale-[0.96] -translate-y-12 blur-[1.5px] pointer-events-none'
-              : 'opacity-0 scale-[1.04] translate-y-12 blur-[1.5px] pointer-events-none'
+          className={`absolute inset-0 pt-16 px-4 sm:px-8 lg:px-12 max-w-[96rem] mx-auto flex items-center transition-opacity duration-500 ease-out will-change-[opacity] ${
+            activeScene === 1 || exitingScene === 1
+              ? 'opacity-100 pointer-events-auto'
+              : 'opacity-0 pointer-events-none'
           }`}
         >
-          <div className="w-full">
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
-              <div>
-                <span className="font-mono text-xs text-[#a855f7] uppercase tracking-wider block mb-1">
-                  SCENE 02 // DISTRIBUTED ARCHITECTURE
-                </span>
-                <h2 className="text-2xl sm:text-4xl font-bold text-white tracking-tight">
+          <div className={`w-full ${sceneRevealClass(1)}`}>
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6 lg:mb-8">
+              <div className="max-w-4xl">
+                <h2 className="reveal-item reveal-headline text-3xl sm:text-4xl lg:text-5xl font-bold text-white tracking-tight">
                   High-velocity modular engine for multi-tenant zero-drift fulfillment.
                 </h2>
               </div>
-              <p className="text-xs text-[#94A3B8] max-w-sm">
+              <p className="reveal-item reveal-paragraph text-sm text-[#94A3B8] max-w-sm">
                 Each module runs isolated peer-to-peer consensus across warehouse boundaries.
               </p>
             </div>
 
-            {/* 3 Interactive Module Perspective Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {[
-                {
-                  id: 0,
-                  mod: 'MODULE 01',
-                  title: 'Manage Products & SKUs',
-                  desc: 'Variant matrices, multi-warehouse bins, and serial numbers. Automated reorder triggers notify procurement.',
-                  icon: 'inventory_2',
-                  accent: '#5356ff',
-                  statLabel: 'Active Catalog',
-                  statVal: '14,280 SKUs',
-                },
-                {
-                  id: 1,
-                  mod: 'MODULE 02',
-                  title: 'Process Orders Seamlessly',
-                  desc: 'From draft reservation to pick, pack, and automated dispatch. Never double-commit stock during demand surges.',
-                  icon: 'receipt_long',
-                  accent: '#82cfff',
-                  statLabel: 'Order Lifecycle',
-                  statVal: 'Draft → Shipped',
-                },
-                {
-                  id: 2,
-                  mod: 'MODULE 03',
-                  title: 'Secure & Multi-Tenant',
-                  desc: 'Complete physical and logical workspace isolation per tenant. Role-based granular permissions at row level.',
-                  icon: 'hub',
-                  accent: '#a855f7',
-                  statLabel: 'Encryption',
-                  statVal: 'AES-256 GCM',
-                },
-              ].map((m) => {
-                const isSelected = selectedModule === m.id;
-                return (
-                  <div
-                    key={m.id}
-                    onClick={() => setSelectedModule(m.id)}
-                    className={`p-6 rounded-3xl border transition-all duration-500 cursor-pointer backdrop-blur-2xl shadow-xl ${
-                      isSelected
-                        ? 'bg-[#0E1424] border-[#a855f7]/60 shadow-[0_0_40px_rgba(168,85,247,0.3)] scale-[1.03] z-10'
-                        : 'bg-[#0E1424]/60 border-white/10 hover:border-white/25 hover:scale-[1.01]'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-4">
+            {/* Feature cards carousel — auto + cursor swipe */}
+            <div className="reveal-item reveal-feature relative">
+              {/* Padding keeps hover lift/scale inside the clip box */}
+              <div
+                className={`overflow-x-hidden overflow-y-visible px-2 sm:px-4 py-10 -my-2 touch-pan-y select-none ${
+                  isDragging ? 'cursor-grabbing' : 'cursor-grab'
+                }`}
+                onPointerDown={onCarouselPointerDown}
+                onPointerMove={onCarouselPointerMove}
+                onPointerUp={onCarouselPointerUp}
+                onPointerCancel={onCarouselPointerUp}
+              >
+                <div
+                  className={`flex will-change-transform ${
+                    isDragging
+                      ? 'transition-none'
+                      : 'transition-transform duration-500 ease-[cubic-bezier(0.19,1,0.22,1)]'
+                  }`}
+                  style={{
+                    width: `${(carouselLoop.length / carouselVisible) * 100}%`,
+                    transform: `translateX(calc(-${(carouselIndex * 100) / carouselLoop.length}% + ${dragOffsetPx}px))`,
+                  }}
+                >
+                  {carouselLoop.map((m, idx) => (
+                    <div
+                      key={`${m.id}-${idx}`}
+                      className="shrink-0 px-2 sm:px-3 lg:px-4"
+                      style={{ width: `${100 / carouselLoop.length}%` }}
+                    >
                       <div
-                        className="w-11 h-11 rounded-2xl flex items-center justify-center text-white shadow-lg"
-                        style={{ backgroundColor: `${m.accent}25` }}
+                        onMouseEnter={() => {
+                          if (!dragActive.current) setCarouselPaused(true);
+                        }}
+                        onMouseLeave={() => {
+                          if (!dragActive.current) setCarouselPaused(false);
+                        }}
+                        className={`group relative z-0 flex flex-col h-full min-h-[280px] sm:min-h-[320px] lg:min-h-[340px] p-7 sm:p-8 lg:p-9 rounded-3xl border border-white/10 bg-[#0E1424]/80 backdrop-blur-2xl shadow-xl transition-all duration-500 ease-out ${
+                          isDragging
+                            ? ''
+                            : 'hover:z-10 hover:-translate-y-3 hover:scale-[1.04] hover:border-[#a855f7]/60 hover:shadow-[0_24px_60px_rgba(168,85,247,0.32)] hover:bg-[#0E1424]'
+                        }`}
                       >
-                        <span className="material-symbols-outlined text-[22px]" style={{ color: m.accent }}>
-                          {m.icon}
-                        </span>
+                        <div className="flex items-center mb-5">
+                          <div
+                            className="w-14 h-14 rounded-2xl flex items-center justify-center text-white shadow-lg transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3"
+                            style={{ backgroundColor: `${m.accent}25` }}
+                          >
+                            <span
+                              className="material-symbols-outlined text-[28px]"
+                              style={{ color: m.accent }}
+                            >
+                              {m.icon}
+                            </span>
+                          </div>
+                        </div>
+
+                        <h3 className="text-xl sm:text-2xl font-bold text-white mb-3 transition-colors duration-300 group-hover:text-[#c0c1ff]">
+                          {m.title}
+                        </h3>
+                        <p className="text-sm text-[#94A3B8] leading-relaxed mb-6">
+                          {m.desc}
+                        </p>
+
+                        <div className="mt-auto bg-black/40 p-3.5 sm:p-4 rounded-2xl border border-white/10 flex items-center justify-between text-xs sm:text-sm font-mono transition-colors duration-300 group-hover:border-white/20">
+                          <span className="text-[#94A3B8]">{m.statLabel}</span>
+                          <span className="text-white font-bold" style={{ color: m.accent }}>
+                            {m.statVal}
+                          </span>
+                        </div>
                       </div>
-                      <span className="font-mono text-[10px] px-2.5 py-0.5 rounded-full bg-white/5 text-[#94A3B8] border border-white/10">
-                        {m.mod}
-                      </span>
                     </div>
+                  ))}
+                </div>
+              </div>
 
-                    <h3 className="text-lg font-bold text-white mb-2">{m.title}</h3>
-                    <p className="text-xs text-[#94A3B8] leading-relaxed mb-4">{m.desc}</p>
-
-                    <div className="bg-black/40 p-3 rounded-2xl border border-white/10 flex items-center justify-between text-xs font-mono">
-                      <span className="text-[#94A3B8]">{m.statLabel}</span>
-                      <span className="text-white font-bold" style={{ color: m.accent }}>
-                        {m.statVal}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
+              <div className="mt-2 flex items-center justify-center gap-2.5">
+                {featureCards.map((card, idx) => (
+                  <button
+                    key={card.id}
+                    type="button"
+                    aria-label={`Show ${card.title}`}
+                    onClick={() => goToCarousel(idx)}
+                    className={`h-2 rounded-full transition-all duration-500 cursor-pointer ${
+                      carouselIndex === idx
+                        ? 'w-8 bg-[#a855f7] shadow-[0_0_10px_rgba(168,85,247,0.7)]'
+                        : 'w-2 bg-white/20 hover:bg-white/45'
+                    }`}
+                  />
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -440,220 +457,107 @@ export const CinematicLanding: React.FC<CinematicLandingProps> = ({
             SCENE 2: PHYSICAL WAREHOUSE CONSENSUS
            ========================================================================= */}
         <div
-          className={`absolute inset-0 pt-16 px-6 sm:px-12 max-w-7xl mx-auto flex items-center transition-[opacity,transform,filter] duration-900 ease-[cubic-bezier(0.19,1,0.22,1)] will-change-[transform,opacity] transform-gpu ${
-            activeScene === 2
-              ? 'opacity-100 scale-100 translate-y-0 blur-0 pointer-events-auto'
-              : activeScene > 2
-              ? 'opacity-0 scale-[0.96] -translate-y-12 blur-[1.5px] pointer-events-none'
-              : 'opacity-0 scale-[1.04] translate-y-12 blur-[1.5px] pointer-events-none'
+          className={`absolute inset-0 pt-16 px-6 sm:px-12 max-w-7xl mx-auto flex items-center transition-opacity duration-500 ease-out will-change-[opacity] ${
+            activeScene === 2 || exitingScene === 2
+              ? 'opacity-100 pointer-events-auto'
+              : 'opacity-0 pointer-events-none'
           }`}
         >
-          <div className="w-full rounded-3xl bg-[#0E1424]/85 border border-white/15 backdrop-blur-2xl p-8 shadow-[0_25px_60px_rgba(0,0,0,0.85)]">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          <div className={`w-full ${sceneRevealClass(2)}`}>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-start">
               <div className="lg:col-span-7">
-                <span className="font-mono text-xs text-[#10B981] uppercase tracking-wider block mb-2 flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-[#10B981] animate-ping" />
-                  SCENE 03 // PHYSICAL WAREHOUSE SYNCHRONIZATION
-                </span>
-                <h2 className="text-2xl sm:text-4xl font-bold text-white tracking-tight mb-4">
-                  Multi-node physical integration, engineered without bottlenecks.
+                <div className="reveal-item reveal-eyebrow text-[11px] font-mono tracking-[0.2em] uppercase text-white/80 mb-4">
+                  VAULT <span className="text-[#2DD4BF]">//</span> INVENTORYOS
+                </div>
+                <h2 className="reveal-item reveal-headline text-2xl sm:text-4xl lg:text-5xl font-bold text-white tracking-tight mb-4 leading-[1.15]">
+                  Inventory and orders, under one{' '}
+                  <span className="text-[#2DD4BF]">secure workspace.</span>
                 </h2>
-                <p className="text-xs sm:text-sm text-[#94A3B8] leading-relaxed mb-6">
-                  Every inventory adjustment, cycle audit, and bulk consignment is signed with an immutable SHA-256 cryptographic proof to eliminate shrinkage disputes.
+                <p className="reveal-item reveal-paragraph text-sm sm:text-base text-[#94A3B8] leading-relaxed mb-10 max-w-2xl">
+                  Manage products, stock levels, and order workflows from a tenant-isolated system built for day-to-day operations.
                 </p>
 
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="p-3.5 rounded-2xl bg-black/35 border border-white/10">
-                    <div className="text-2xl sm:text-3xl font-bold text-white font-mono">4.8M+</div>
-                    <div className="text-[11px] text-[#94A3B8] mt-1">Ledger Tx / Day</div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8">
+                  <div className="reveal-item reveal-feature flex items-start gap-3">
+                    <span className="material-symbols-outlined text-[#5356ff] text-[22px] mt-0.5">deployed_code</span>
+                    <div>
+                      <div className="text-[11px] font-semibold tracking-widest text-white uppercase mb-1">Products</div>
+                      <div className="text-xs text-[#94A3B8] leading-relaxed">Create, update, search, and manage inventory</div>
+                    </div>
                   </div>
-                  <div className="p-3.5 rounded-2xl bg-black/35 border border-white/10">
-                    <div className="text-2xl sm:text-3xl font-bold text-[#82cfff] font-mono">&lt; 35ms</div>
-                    <div className="text-[11px] text-[#94A3B8] mt-1">Consensus Speed</div>
+                  <div className="reveal-item reveal-feature-2 flex items-start gap-3">
+                    <span className="material-symbols-outlined text-[#5356ff] text-[22px] mt-0.5">shopping_cart</span>
+                    <div>
+                      <div className="text-[11px] font-semibold tracking-widest text-white uppercase mb-1">Orders</div>
+                      <div className="text-xs text-[#94A3B8] leading-relaxed">Draft, confirm, fulfill, or cancel orders</div>
+                    </div>
                   </div>
-                  <div className="p-3.5 rounded-2xl bg-black/35 border border-white/10">
-                    <div className="text-2xl sm:text-3xl font-bold text-[#10B981] font-mono">99.999%</div>
-                    <div className="text-[11px] text-[#94A3B8] mt-1">Audit Precision</div>
+                  <div className="reveal-item reveal-feature-3 flex items-start gap-3">
+                    <span className="material-symbols-outlined text-[#5356ff] text-[22px] mt-0.5">group</span>
+                    <div>
+                      <div className="text-[11px] font-semibold tracking-widest text-white uppercase mb-1">Access</div>
+                      <div className="text-xs text-[#94A3B8] leading-relaxed">Admin and Staff permissions by role</div>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Zone Alpha Terminal Preview */}
               <div className="lg:col-span-5">
-                <div className="bg-black/50 border border-white/15 rounded-3xl p-5 shadow-2xl backdrop-blur-sm">
-                  <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-3">
-                    <span className="font-mono text-xs text-white font-bold">ZONE ALPHA // BAY 14-C</span>
-                    <span className="w-2 h-2 rounded-full bg-[#10B981] shadow-[0_0_8px_#10B981] animate-pulse" />
-                  </div>
-                  <div className="space-y-2 text-xs mb-4">
-                    <div className="flex justify-between py-1.5 border-b border-white/5">
-                      <span className="text-[#94A3B8]">Bin Audit Status</span>
-                      <span className="font-mono text-[#10B981] font-bold">VERIFIED</span>
-                    </div>
-                    <div className="flex justify-between py-1.5 border-b border-white/5">
-                      <span className="text-[#94A3B8]">Last Barcode Scan</span>
-                      <span className="font-mono text-white">11:42:09 UTC</span>
-                    </div>
-                    <div className="flex justify-between py-1.5">
-                      <span className="text-[#94A3B8]">Operator Badge</span>
-                      <span className="font-mono text-[#c0c1ff]">USR-89104 (Admin)</span>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => onNavigate('stock-adjustments')}
-                    className="w-full py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-mono text-xs transition-colors cursor-pointer flex items-center justify-center gap-1.5"
-                  >
-                    <span>View Reconciliation Logs</span>
-                    <span className="material-symbols-outlined text-[15px]">arrow_forward</span>
-                  </button>
+                <div className="reveal-item reveal-eyebrow text-[11px] font-semibold tracking-[0.2em] uppercase text-white mb-5">
+                  Workspace
                 </div>
+                <ul className="space-y-3.5 text-sm text-[#CBD5E1] mb-6">
+                  <li className="reveal-item reveal-feature flex items-center gap-3">
+                    <span className="material-symbols-outlined text-[#5356ff] text-[18px]">database</span>
+                    <span>Tenant-isolated inventory</span>
+                  </li>
+                  <li className="reveal-item reveal-feature-2 flex items-center gap-3">
+                    <span className="material-symbols-outlined text-[#5356ff] text-[18px]">deployed_code</span>
+                    <span>Products and stock</span>
+                  </li>
+                  <li className="reveal-item reveal-feature-3 flex items-center gap-3">
+                    <span className="material-symbols-outlined text-[#5356ff] text-[18px]">receipt_long</span>
+                    <span>Orders and fulfillment</span>
+                  </li>
+                  <li className="reveal-item reveal-feature-4 flex items-center gap-3">
+                    <span className="material-symbols-outlined text-[#5356ff] text-[18px]">group</span>
+                    <span>Role-based access</span>
+                  </li>
+                </ul>
+
+                <button
+                  onClick={() => onNavigate('dashboard')}
+                  className="reveal-item reveal-cta-late btn-hover text-white text-sm hover:text-[#2DD4BF] cursor-pointer inline-flex items-center gap-1.5"
+                >
+                  <span>View workspace</span>
+                  <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                </button>
               </div>
             </div>
           </div>
         </div>
 
         {/* =========================================================================
-            SCENE 3: ONBOARDING & DUAL PORTAL GATEWAYS
+            SCENE 3: ONBOARDING CTA
            ========================================================================= */}
         <div
-          className={`absolute inset-0 pt-16 px-6 sm:px-12 max-w-4xl mx-auto flex flex-col justify-center items-center text-center transition-[opacity,transform,filter] duration-900 ease-[cubic-bezier(0.19,1,0.22,1)] will-change-[transform,opacity] transform-gpu ${
-            activeScene === 3
-              ? 'opacity-100 scale-100 translate-y-0 blur-0 pointer-events-auto'
-              : 'opacity-0 scale-[0.96] translate-y-12 blur-[1.5px] pointer-events-none'
+          className={`absolute inset-0 pt-16 px-6 sm:px-12 max-w-4xl mx-auto flex flex-col justify-center items-center text-center transition-opacity duration-500 ease-out will-change-[opacity] ${
+            activeScene === 3 || exitingScene === 3
+              ? 'opacity-100 pointer-events-auto'
+              : 'opacity-0 pointer-events-none'
           }`}
         >
-          <span className="px-3.5 py-1 rounded-full bg-white/[0.05] border border-white/15 text-[11px] font-mono text-[#82cfff] mb-4 backdrop-blur-xl shadow-lg">
-            SCENE 04 // ENTERPRISE DEPLOYMENT
-          </span>
+          <div className={sceneRevealClass(3)}>
+            <h2 className="reveal-item reveal-headline text-3xl sm:text-5xl font-bold text-white tracking-tight mb-4">
+              Supercharge your logistics with VAULT InventoryOS today.
+            </h2>
 
-          <h2 className="text-3xl sm:text-5xl font-bold text-white tracking-tight mb-4">
-            Supercharge your logistics with VAULT InventoryOS today.
-          </h2>
-
-          <p className="text-sm text-[#94A3B8] max-w-xl mx-auto mb-8 leading-relaxed">
-            Choose your gateway below: unlock the security blast shutter to enter, or request an apartment unit inside our building cluster.
-          </p>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 w-full max-w-lg mb-8">
-            {/* Shutter Login Card */}
-            <div
-              onClick={() => onNavigate('login')}
-              className="p-6 rounded-3xl bg-black/40 border border-white/15 hover:border-[#5356ff]/80 transition-all duration-300 cursor-pointer group text-left shadow-2xl backdrop-blur-xl hover:scale-[1.02]"
-            >
-              <div className="flex items-center justify-between mb-3.5">
-                <span className="material-symbols-outlined text-[26px] text-[#5356ff] group-hover:scale-110 transition-transform">
-                  lock
-                </span>
-                <span className="font-mono text-[9px] text-[#94A3B8] px-2 py-0.5 rounded-full bg-white/5 border border-white/10">
-                  LOCKED SHUTTER
-                </span>
-              </div>
-              <h3 className="text-base font-bold text-white group-hover:text-[#c0c1ff] transition-colors">
-                Sign In
-              </h3>
-              <p className="text-xs text-[#94A3B8] mt-1.5 leading-relaxed">
-                Disengage the physical blast gate and access your existing tenant node.
-              </p>
-            </div>
-
-            {/* Building Signup Card */}
-            <div
-              onClick={() => onNavigate('signup')}
-              className="p-6 rounded-3xl bg-black/40 border border-white/15 hover:border-[#82cfff]/80 transition-all duration-300 cursor-pointer group text-left shadow-2xl backdrop-blur-xl hover:scale-[1.02]"
-            >
-              <div className="flex items-center justify-between mb-3.5">
-                <span className="material-symbols-outlined text-[26px] text-[#82cfff] group-hover:scale-110 transition-transform">
-                  apartment
-                </span>
-                <span className="font-mono text-[9px] text-[#10B981] px-2 py-0.5 rounded-full bg-[#10B981]/15 border border-[#10B981]/30">
-                  ASSIGN UNIT
-                </span>
-              </div>
-              <h3 className="text-base font-bold text-white group-hover:text-[#82cfff] transition-colors">
-                Register Workspace
-              </h3>
-              <p className="text-xs text-[#94A3B8] mt-1.5 leading-relaxed">
-                Claim a dedicated apartment unit inside the decentralized tower.
-              </p>
-            </div>
+            <p className="reveal-item reveal-paragraph text-sm text-[#94A3B8] max-w-xl mx-auto leading-relaxed">
+              Log in or sign up from the navigation above to enter your workspace.
+            </p>
           </div>
-
-          <button
-            onClick={() => onNavigate('dashboard')}
-            className="text-xs font-mono text-[#94A3B8] hover:text-white flex items-center gap-1.5 transition-colors cursor-pointer py-1"
-          >
-            <span>Or bypass directly to Live Admin Console</span>
-            <span className="material-symbols-outlined text-[15px]">arrow_forward</span>
-          </button>
         </div>
       </div>
-
-      {/* ========================================================================= */}
-      {/* 3. FIXED BOTTOM HUD & SILKY SCENE TIMELINE CONTROLS                       */}
-      {/* ========================================================================= */}
-      <footer className="fixed bottom-6 left-6 right-6 z-40 flex items-center justify-between text-xs font-mono text-[#94A3B8] pointer-events-none">
-        {/* Left: Scroll hints with smooth float icon */}
-        <div className="pointer-events-auto flex items-center gap-2.5 bg-[#080B11]/75 backdrop-blur-2xl px-3.5 py-1.5 rounded-full border border-white/10 shadow-lg">
-          <span className="material-symbols-outlined text-[17px] text-[#82cfff] animate-[float_3s_ease-in-out_infinite]">
-            unfold_more
-          </span>
-          <span className="text-[11px] hidden sm:inline">Scroll or use arrows to glide between scenes</span>
-          <span className="text-[11px] sm:hidden">Swipe or tap dots</span>
-        </div>
-
-        {/* Center: Interactive scene progress pills */}
-        <div className="pointer-events-auto flex items-center gap-2.5 bg-[#080B11]/80 backdrop-blur-2xl px-4 py-2 rounded-full border border-white/15 shadow-xl">
-          {scenesMeta.map((sc, idx) => (
-            <button
-              key={sc.id}
-              onClick={() => goToScene(idx)}
-              className="flex items-center gap-2 group cursor-pointer p-0.5"
-              title={`Jump to ${sc.title}`}
-            >
-              <span
-                className={`h-2 rounded-full transition-all duration-500 ease-[cubic-bezier(0.19,1,0.22,1)] ${
-                  activeScene === idx
-                    ? 'w-7 shadow-[0_0_12px_rgba(83,86,255,0.8)]'
-                    : 'w-2 bg-white/20 hover:bg-white/40'
-                }`}
-                style={{
-                  backgroundColor: activeScene === idx ? sc.accent : undefined,
-                }}
-              />
-            </button>
-          ))}
-        </div>
-
-        {/* Right: Active scene indicator badge & Quick Next/Prev */}
-        <div className="pointer-events-auto flex items-center gap-2">
-          {activeScene > 0 && (
-            <button
-              onClick={() => goToScene(activeScene - 1)}
-              className="w-8 h-8 rounded-full bg-[#080B11]/80 hover:bg-[#080B11] border border-white/15 text-white flex items-center justify-center cursor-pointer transition-all hover:scale-105 backdrop-blur-xl shadow-md"
-              title="Previous Scene"
-            >
-              <span className="material-symbols-outlined text-[16px]">arrow_upward</span>
-            </button>
-          )}
-
-          {activeScene < totalScenes - 1 && (
-            <button
-              onClick={() => goToScene(activeScene + 1)}
-              className="w-8 h-8 rounded-full bg-[#080B11]/80 hover:bg-[#080B11] border border-white/15 text-white flex items-center justify-center cursor-pointer transition-all hover:scale-105 backdrop-blur-xl shadow-md"
-              title="Next Scene"
-            >
-              <span className="material-symbols-outlined text-[16px]">arrow_downward</span>
-            </button>
-          )}
-
-          <div className="hidden md:flex items-center gap-2 bg-[#080B11]/75 backdrop-blur-2xl px-3.5 py-1.5 rounded-full border border-white/10 shadow-lg">
-            <span className="text-white font-bold">{scenesMeta[activeScene].code}</span>
-            <span className="text-[#64748B]">/</span>
-            <span style={{ color: scenesMeta[activeScene].accent }}>{scenesMeta[activeScene].subtitle}</span>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 };

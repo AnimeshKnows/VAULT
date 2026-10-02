@@ -137,13 +137,16 @@ app.UseRateLimiter();
 // 4. Authentication
 app.UseAuthentication();
 
-// 5. Tenant resolution
+// 5. Reject deactivated users even if access JWT is still unexpired
+app.UseMiddleware<ActiveUserMiddleware>();
+
+// 6. Tenant resolution
 app.UseMiddleware<TenantResolutionMiddleware>();
 
-// 6. Authorization
+// 7. Authorization
 app.UseAuthorization();
 
-// 7. Controllers
+// 8. Controllers
 app.MapControllers();
 
 // Health — liveness (process up) + readiness (includes DB)

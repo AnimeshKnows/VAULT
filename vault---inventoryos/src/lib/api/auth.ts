@@ -11,8 +11,17 @@ export interface AuthResponse {
   role: string;
 }
 
+export interface CurrentUserDto {
+  id: string;
+  tenantId: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: string;
+  isActive: boolean;
+}
+
 function persistAuth(data: AuthResponse): AuthResponse {
-  // Refresh token is set as HttpOnly cookie by the API — never persist it in JS storage.
   saveSession({
     accessToken: data.accessToken,
     userId: data.userId,
@@ -63,7 +72,6 @@ export async function login(input: {
 
 export async function logout(): Promise<void> {
   try {
-    // Cookie supplies refresh token; empty body is fine.
     await apiRequest('/api/auth/logout', {
       method: 'POST',
       body: {},
@@ -71,4 +79,8 @@ export async function logout(): Promise<void> {
   } catch {
     // best-effort revoke
   }
+}
+
+export async function fetchCurrentUser(): Promise<CurrentUserDto> {
+  return apiRequest<CurrentUserDto>('/api/auth/me');
 }

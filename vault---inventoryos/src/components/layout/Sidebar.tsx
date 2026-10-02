@@ -5,17 +5,17 @@ import { VAULT_LOGO_URL } from '../../data/mockData';
 interface SidebarProps {
   currentPage: NavigationPage;
   onNavigate: (page: NavigationPage) => void;
+  onLogout?: () => void;
   isOpenMobile?: boolean;
   onCloseMobile?: () => void;
-  ledgerNumber?: number;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
   currentPage,
   onNavigate,
+  onLogout,
   isOpenMobile,
   onCloseMobile,
-  ledgerNumber = 819,
 }) => {
   const operationsNav = [
     { id: 'dashboard' as NavigationPage, label: 'Dashboard', icon: 'grid_view' },
@@ -32,9 +32,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <>
-      {/* Mobile backdrop */}
       {isOpenMobile && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 lg:hidden"
           onClick={onCloseMobile}
         />
@@ -46,30 +45,29 @@ export const Sidebar: React.FC<SidebarProps> = ({
         }`}
       >
         <div className="flex flex-col">
-          {/* Logo & Platform Name */}
           <div className="h-16 px-5 flex items-center justify-between border-b border-white/5">
-            <button 
+            <button
               onClick={() => onNavigate('landing')}
               className="flex items-center gap-3 text-left group transition-opacity hover:opacity-90"
               title="Return to Public Overview"
             >
               <img
                 src={VAULT_LOGO_URL}
-                alt="VAULT Logo"
-                className="h-7 w-auto object-contain transition-transform group-hover:scale-105"
+                alt="VAULT"
+                className="h-8 w-8 object-contain transition-transform group-hover:scale-105"
               />
               <div className="flex flex-col">
                 <span className="text-[17px] font-semibold text-[#F1F5F9] tracking-tight leading-tight">
                   VAULT
                 </span>
-                <span className="text-[10px] font-mono tracking-widest text-[#c0c1ff] font-semibold">
-                  INVENTORYOS
+                <span className="text-[11px] font-medium tracking-wide text-[#94A3B8] leading-none">
+                  InventoryOS
                 </span>
               </div>
             </button>
             {onCloseMobile && (
-              <button 
-                onClick={onCloseMobile} 
+              <button
+                onClick={onCloseMobile}
                 className="lg:hidden text-[#94A3B8] hover:text-white p-1 rounded-lg hover:bg-white/5"
               >
                 <span className="material-symbols-outlined text-[20px]">close</span>
@@ -77,7 +75,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
             )}
           </div>
 
-          {/* Operations Nav Section */}
           <div className="px-3 py-4">
             <div className="text-[#475569] font-mono text-[11px] font-semibold uppercase tracking-wider px-3 pb-2">
               Operations
@@ -98,7 +95,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         : 'text-[#94A3B8] hover:bg-[#181b25] hover:text-[#dfe2ef]'
                     }`}
                   >
-                    <span className={`material-symbols-outlined text-[20px] ${isActive ? 'text-[#5356ff]' : 'text-[#94A3B8]'}`}>
+                    <span
+                      className={`material-symbols-outlined text-[20px] ${
+                        isActive ? 'text-[#5356ff]' : 'text-[#94A3B8]'
+                      }`}
+                    >
                       {item.icon}
                     </span>
                     <span>{item.label}</span>
@@ -109,7 +110,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
         </div>
 
-        {/* System & Ledger Status Footer */}
         <div className="p-3 border-t border-white/5">
           <div className="text-[#475569] font-mono text-[11px] font-semibold uppercase tracking-wider px-3 pb-2">
             System
@@ -135,29 +135,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </button>
               );
             })}
-            
+
             <button
-              onClick={() => onNavigate('landing')}
+              onClick={() => {
+                if (onLogout) onLogout();
+                else onNavigate('login');
+              }}
               className="w-full flex items-center gap-3.5 px-3.5 py-2 rounded-lg text-sm font-medium text-[#94A3B8] hover:bg-[#181b25] hover:text-[#EF4444] transition-all"
             >
               <span className="material-symbols-outlined text-[20px]">logout</span>
               <span>Logout / Exit</span>
             </button>
           </nav>
-
-          {/* Immutable Ledger Sync Capsule */}
-          <div className="bg-[#1c2029] border border-white/5 px-3 py-2.5 rounded-xl flex items-center justify-between shadow-sm">
-            <div className="flex items-center gap-2">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#10B981] opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#10B981]"></span>
-              </span>
-              <span className="font-mono text-[11px] font-semibold text-[#94A3B8] tracking-wider">
-                SYNCED : LEDGER #{ledgerNumber}
-              </span>
-            </div>
-            <span className="material-symbols-outlined text-[#475569] text-[16px]">bolt</span>
-          </div>
         </div>
       </aside>
     </>

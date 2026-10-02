@@ -505,3 +505,10 @@ obj/
 
 # Local / CI test result artifacts
 TestResults/
+
+# Extra secret/credential patterns
+secrets.json
+*.pem
+*.key
+credentials.json
+

@@ -19,7 +19,6 @@ export const ShutterLogin: React.FC<ShutterLoginProps> = ({
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [isManualFormHidden, setIsManualFormHidden] = useState(false);
 
   // States:
   // 'idle'             -> Form is visible, shutter closed & locked
@@ -101,8 +100,7 @@ export const ShutterLogin: React.FC<ShutterLoginProps> = ({
     }
   };
 
-  const isFormVanished = authStage !== 'idle' || isManualFormHidden;
-  const isLocked = authStage === 'idle' || authStage === 'validating' || authStage === 'attempt_lifting' || authStage === 'jammed';
+  const isFormVanished = authStage !== 'idle';
   const isUnlocking = authStage === 'unlocking';
   const isLifting = authStage === 'lifting';
   const isAttemptLifting = authStage === 'attempt_lifting';
@@ -111,43 +109,12 @@ export const ShutterLogin: React.FC<ShutterLoginProps> = ({
   return (
     <div className="relative min-h-screen w-full flex items-center justify-center p-4 sm:p-6 overflow-hidden select-none">
       {/* ========================================================================= */}
-      {/* 1. TOP FLOATING NAVIGATION & BACK BUTTON                                  */}
-      {/* ========================================================================= */}
-      <div className="fixed top-6 left-6 z-40 flex items-center gap-3">
-        <button
-          onClick={() => onNavigate('landing')}
-          className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-black/40 hover:bg-black/70 text-xs font-mono text-[#94A3B8] hover:text-white border border-white/15 backdrop-blur-xl transition-all shadow-lg cursor-pointer"
-        >
-          <span className="material-symbols-outlined text-[16px]">arrow_back</span>
-          <span>Back to Landing</span>
-        </button>
-
-        {/* View Shutter / Toggle Form Visibility */}
-        <button
-          type="button"
-          onClick={() => setIsManualFormHidden(!isManualFormHidden)}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-mono border backdrop-blur-xl transition-all shadow-lg cursor-pointer ${
-            isManualFormHidden
-              ? 'bg-[#82cfff]/20 text-[#82cfff] border-[#82cfff]/50'
-              : 'bg-black/40 hover:bg-black/70 text-[#94A3B8] hover:text-white border-white/15'
-          }`}
-          title={isManualFormHidden ? 'Show login form' : 'Hide form to clearly inspect the blast shutter and lock mechanism'}
-        >
-          <span className="material-symbols-outlined text-[15px]">
-            {isManualFormHidden ? 'visibility' : 'visibility_off'}
-          </span>
-          <span>{isManualFormHidden ? 'Show Form' : 'View Shutter & Lock'}</span>
-        </button>
-      </div>
-
-      {/* ========================================================================= */}
-      {/* 2. CINEMATIC SHUTTER STATUS TELEMETRY OVERLAY (WHEN FORM VANISHES)        */}
+      {/* 1. CINEMATIC SHUTTER STATUS TELEMETRY OVERLAY (WHEN FORM VANISHES)        */}
       {/* ========================================================================= */}
       {authStage !== 'idle' && (
         <div className="fixed top-8 inset-x-0 mx-auto w-fit z-50 px-6 py-3 rounded-2xl bg-black/85 border border-white/20 backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.9)] flex items-center gap-4 animate-in fade-in zoom-in-95 duration-500">
           {authStage === 'validating' ? (
             <>
-              <div className="w-3 h-3 rounded-full bg-[#82cfff] animate-ping" />
               <div>
                 <span className="font-mono text-xs font-bold text-white tracking-wider block">
                   AUTHENTICATING CREDENTIALS // CIPHER MATCHING...
@@ -159,7 +126,6 @@ export const ShutterLogin: React.FC<ShutterLoginProps> = ({
             </>
           ) : authStage === 'unlocking' ? (
             <>
-              <div className="w-3 h-3 rounded-full bg-[#10B981] animate-pulse" />
               <div>
                 <span className="font-mono text-xs font-bold text-[#10B981] tracking-wider block">
                   CREDENTIALS CONFIRMED // DISENGAGING PHYSICAL LOCK
@@ -171,7 +137,7 @@ export const ShutterLogin: React.FC<ShutterLoginProps> = ({
             </>
           ) : authStage === 'lifting' ? (
             <>
-              <span className="material-symbols-outlined text-[20px] text-[#10B981] animate-bounce">
+              <span className="material-symbols-outlined text-[20px] text-[#10B981]">
                 arrow_upward
               </span>
               <div>
@@ -185,7 +151,6 @@ export const ShutterLogin: React.FC<ShutterLoginProps> = ({
             </>
           ) : authStage === 'attempt_lifting' ? (
             <>
-              <div className="w-3 h-3 rounded-full bg-[#F59E0B] animate-ping" />
               <div>
                 <span className="font-mono text-xs font-bold text-[#F59E0B] tracking-wider block">
                   SHUTTER MOTOR ENGAGED // ATTEMPTING DISPATCH...
@@ -197,7 +162,7 @@ export const ShutterLogin: React.FC<ShutterLoginProps> = ({
             </>
           ) : (
             <>
-              <span className="material-symbols-outlined text-[22px] text-[#EF4444] animate-pulse">
+              <span className="material-symbols-outlined text-[22px] text-[#EF4444]">
                 gpp_bad
               </span>
               <div>
@@ -214,7 +179,7 @@ export const ShutterLogin: React.FC<ShutterLoginProps> = ({
       )}
 
       {/* ========================================================================= */}
-      {/* 3. SHUTTER & GATE CONTAINER (PHYSICAL BARRIER BLOCKING ENVIRONMENT)      */}
+      {/* 2. SHUTTER & GATE CONTAINER (PHYSICAL BARRIER BLOCKING ENVIRONMENT)      */}
       {/* ========================================================================= */}
       <div
         className={`fixed inset-0 pointer-events-none transition-transform duration-1000 ease-[cubic-bezier(0.16,1,0.3,1)] z-10 ${
@@ -233,23 +198,23 @@ export const ShutterLogin: React.FC<ShutterLoginProps> = ({
             isJammed ? 'animate-[shake_0.25s_ease-in-out_3]' : ''
           }`}
         >
-          {/* Top Roller Drum Enclosure & Warning Strip */}
-          <div className="w-full h-12 bg-[#0f1422] border-b border-white/10 flex items-center justify-between px-6 sm:px-10 shadow-inner">
-            <div className="flex items-center gap-3">
-              <span
-                className={`w-2.5 h-2.5 rounded-full ${
-                  isUnlocking || isLifting
-                    ? 'bg-[#10B981]'
-                    : isJammed
-                    ? 'bg-[#EF4444] animate-ping'
-                    : 'bg-[#EF4444] animate-pulse'
-                }`}
-              />
-              <span className="font-mono text-[11px] sm:text-xs tracking-widest text-[#94A3B8] uppercase">
+          {/* Top nav bar with in-app back control */}
+          <div className="w-full h-12 bg-[#0f1422] border-b border-white/10 flex items-center justify-between px-4 sm:px-8 shadow-inner pointer-events-auto">
+            <div className="flex items-center gap-3 min-w-0">
+              <button
+                type="button"
+                onClick={() => onNavigate('landing')}
+                className="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg text-[#94A3B8] hover:text-white hover:bg-white/10 transition-all cursor-pointer"
+                title="Back"
+                aria-label="Back"
+              >
+                <span className="text-base font-medium leading-none">&lt;</span>
+              </button>
+              <span className="font-mono text-[11px] sm:text-xs tracking-widest text-[#94A3B8] uppercase truncate">
                 VAULT SECURITY BLAST SHUTTER // GATE SECTOR 01
               </span>
             </div>
-            <div className="flex items-center gap-3 font-mono text-[10px] text-[#64748B]">
+            <div className="flex items-center gap-3 font-mono text-[10px] text-[#64748B] shrink-0">
               <span className="hidden sm:inline">MOTOR TORQUE: 1850 NM</span>
               <span
                 className={`px-2 py-0.5 rounded border text-[9px] ${
@@ -300,18 +265,7 @@ export const ShutterLogin: React.FC<ShutterLoginProps> = ({
 
           {/* Bottom Heavy Steel Bumper with Hydraulic Floor Stopper */}
           <div className="w-full h-14 bg-[#090d16] border-t-2 border-white/10 flex items-center justify-between px-6 sm:px-10">
-            <div className="flex items-center gap-2.5">
-              <span className="font-mono text-[10px] text-[#64748B]">FLOOR HYDRAULIC ANCHORS</span>
-              <span
-                className={`w-2.5 h-2.5 rounded-full transition-colors duration-300 ${
-                  isUnlocking || isLifting
-                    ? 'bg-[#10B981] shadow-[0_0_8px_#10B981]'
-                    : isJammed
-                    ? 'bg-[#EF4444] shadow-[0_0_8px_#EF4444] animate-ping'
-                    : 'bg-[#F59E0B]'
-                }`}
-              />
-            </div>
+            <span className="font-mono text-[10px] text-[#64748B]">FLOOR HYDRAULIC ANCHORS</span>
             <span className="font-mono text-[10px] text-[#64748B]">
               BEARING FORCE: 120,000 N • REINFORCED TITANIUM
             </span>
@@ -332,15 +286,7 @@ export const ShutterLogin: React.FC<ShutterLoginProps> = ({
                   ? 'w-48 sm:w-72 opacity-100 border-[#EF4444]/60 shadow-[0_0_20px_rgba(239,68,68,0.5)]'
                   : 'w-48 sm:w-64 opacity-100'
               }`}
-            >
-              <div className="w-full h-full flex items-center justify-start pl-2">
-                <span
-                  className={`w-2 h-2 rounded-full transition-colors ${
-                    isJammed ? 'bg-[#EF4444] animate-ping' : 'bg-[#EF4444]/60'
-                  }`}
-                />
-              </div>
-            </div>
+            />
 
             {/* Central High-Tech Lock Housing Core */}
             <div
@@ -415,15 +361,7 @@ export const ShutterLogin: React.FC<ShutterLoginProps> = ({
                   ? 'w-48 sm:w-72 opacity-100 border-[#EF4444]/60 shadow-[0_0_20px_rgba(239,68,68,0.5)]'
                   : 'w-48 sm:w-64 opacity-100'
               }`}
-            >
-              <div className="w-full h-full flex items-center justify-end pr-2">
-                <span
-                  className={`w-2 h-2 rounded-full transition-colors ${
-                    isJammed ? 'bg-[#EF4444] animate-ping' : 'bg-[#EF4444]/60'
-                  }`}
-                />
-              </div>
-            </div>
+            />
           </div>
         </div>
       </div>
@@ -440,22 +378,10 @@ export const ShutterLogin: React.FC<ShutterLoginProps> = ({
         }`}
       >
         <div className="rounded-3xl bg-black/40 backdrop-blur-xl border border-white/20 p-6 sm:p-8 shadow-[0_25px_70px_rgba(0,0,0,0.85),inset_0_1px_2px_rgba(255,255,255,0.25)]">
-          {/* Header pill */}
-          <div className="flex items-center justify-between pb-3.5 border-b border-white/10 mb-5">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#5356ff] animate-ping" />
-              <span className="font-mono text-[11px] font-semibold uppercase tracking-wider text-[#c0c1ff]">
-                ACCESS GATEWAY TERMINAL
-              </span>
-            </div>
-            <span
-              className={`font-mono text-[10px] px-2.5 py-0.5 rounded-full border transition-colors ${
-                isLocked
-                  ? 'border-[#F59E0B]/40 bg-[#F59E0B]/15 text-[#F59E0B]'
-                  : 'border-[#10B981]/40 bg-[#10B981]/15 text-[#10B981]'
-              }`}
-            >
-              {isLocked ? 'SHUTTER ENGAGED' : 'UNLATCHED'}
+          {/* Header */}
+          <div className="flex items-center pb-3.5 border-b border-white/10 mb-5">
+            <span className="font-mono text-[11px] font-semibold uppercase tracking-wider text-[#c0c1ff]">
+              ACCESS GATEWAY TERMINAL
             </span>
           </div>
 
@@ -562,43 +488,19 @@ export const ShutterLogin: React.FC<ShutterLoginProps> = ({
                 <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
               </button>
 
-              {/* Explicit Test Action: Demonstrate Both Valid and Invalid Behaviors */}
-              <div className="grid grid-cols-2 gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => void processCredentials(false)}
-                  disabled={authStage !== 'idle'}
-                  className="h-8 rounded-xl bg-white/5 hover:bg-white/10 text-[#10B981] font-mono text-[10px] flex items-center justify-center gap-1 transition-colors border border-white/10 cursor-pointer disabled:opacity-50"
-                  title="Authenticate against the live VAULT API"
-                >
-                  <span className="material-symbols-outlined text-[14px]">check</span>
-                  <span>Retry API Login</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => void processCredentials(true)}
-                  disabled={authStage !== 'idle'}
-                  className="h-8 rounded-xl bg-white/5 hover:bg-white/10 text-[#EF4444] font-mono text-[10px] flex items-center justify-center gap-1 transition-colors border border-white/10 cursor-pointer disabled:opacity-50"
-                  title="Form vanishes, shutter tries to open, lock halts it and shakes, then form reappears"
-                >
-                  <span className="material-symbols-outlined text-[14px]">close</span>
-                  <span>Test Invalid (Refuses)</span>
-                </button>
-              </div>
             </div>
           </form>
 
           {/* Switch to Signup / Apartment Assignment */}
           <div className="mt-5 pt-4 border-t border-white/10 text-center">
             <p className="text-xs text-[#94A3B8]">
-              Don&apos;t have an allocated slot?{' '}
+              Don&apos;t have an account?{' '}
               <button
                 type="button"
                 onClick={() => onNavigate('signup')}
                 className="text-[#82cfff] hover:text-white font-medium underline underline-offset-4 decoration-[#82cfff]/40 transition-colors cursor-pointer"
               >
-                Request Building Unit Assignment →
+                Sign up →
               </button>
             </p>
           </div>

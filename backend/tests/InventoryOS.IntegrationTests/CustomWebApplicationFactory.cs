@@ -29,6 +29,7 @@ public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
     public Guid TenantAId { get; } = Guid.NewGuid();
     public Guid TenantBId { get; } = Guid.NewGuid();
     public Guid TenantAUserId { get; } = Guid.NewGuid();
+    public Guid TenantAStaffUserId { get; } = Guid.NewGuid();
     public Guid TenantBUserId { get; } = Guid.NewGuid();
     public Guid TenantBProductId { get; } = Guid.NewGuid();
     public Guid TenantAProductId { get; } = Guid.NewGuid();
@@ -99,6 +100,17 @@ public sealed class CustomWebApplicationFactory : WebApplicationFactory<Program>
             FirstName = "Admin",
             LastName = "A",
             Role = Role.Admin,
+            IsActive = true
+        });
+        context.Users.Add(new User
+        {
+            Id = TenantAStaffUserId,
+            TenantId = TenantAId,
+            Email = "staff-a@test.com",
+            PasswordHash = "hash",
+            FirstName = "Staff",
+            LastName = "A",
+            Role = Role.Staff,
             IsActive = true
         });
         context.Products.Add(new Product

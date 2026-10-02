@@ -103,7 +103,6 @@ export function mapOrder(dto: ApiOrder): Order {
     status,
     totalAmount: Number(dto.totalAmount),
     createdAt: new Date(dto.createdAt).toLocaleString(),
-    ledgerBlock: `TENANT-LEDGER // ${dto.orderNumber}`,
     items: (dto.items ?? []).map((item) => ({
       productId: item.productId,
       sku: item.productSku || '—',

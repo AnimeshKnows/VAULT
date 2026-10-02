@@ -1,4 +1,4 @@
-export type NavigationPage = 
+export type NavigationPage =
   | 'landing'
   | 'login'
   | 'signup'
@@ -29,7 +29,6 @@ export interface Order {
   totalAmount: number;
   createdAt: string;
   items: OrderItem[];
-  ledgerBlock: string;
   shippingAddress?: string;
   paymentMethod?: string;
 }
@@ -61,17 +60,14 @@ export interface StockAdjustment {
   newStock: number;
   reason: string;
   operatorBadge: string;
-  binLocation: string;
-  hash: string;
 }
 
 export interface UserAccount {
   id: string;
   name: string;
   email: string;
-  role: 'Admin' | 'Warehouse Manager' | 'Dispatch Clerk' | 'Auditor';
-  avatar: string;
-  activeStatus: 'Active' | 'Offline';
+  role: 'Admin' | 'Staff';
+  activeStatus: 'Active' | 'Inactive';
   lastActive: string;
 }
 
@@ -80,8 +76,7 @@ export interface Tenant {
   name: string;
   code: string;
   skuCount: number;
-  region: string;
-  ledgerNode: string;
+  isActive: boolean;
 }
 
 export interface SystemNotification {
@@ -91,4 +86,14 @@ export interface SystemNotification {
   time: string;
   type: 'critical' | 'success' | 'info' | 'warning';
   read: boolean;
+}
+
+export interface CurrentUserProfile {
+  id: string;
+  tenantId: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: string;
+  displayName: string;
 }

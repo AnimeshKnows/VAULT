@@ -36,4 +36,18 @@ public sealed class UserRepository : Repository<User>, IUserRepository
             .AsNoTracking()
             .AnyAsync(u => u.TenantId == tenantId && u.Email.ToLower() == normalized, cancellationToken);
     }
+
+    public async Task<(bool IsActive, string Role)?> GetAuthSnapshotIgnoreFiltersAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        var user = await _dbSet
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .Where(u => u.Id == userId)
+            .Select(u => new { u.IsActive, Role = u.Role.ToString() })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return user is null ? null : (user.IsActive, user.Role);
+    }
 }

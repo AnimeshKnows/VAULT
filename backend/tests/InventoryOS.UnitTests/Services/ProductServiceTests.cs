@@ -15,6 +15,8 @@ public class ProductServiceTests
     private readonly Mock<IUnitOfWork> _uow = new();
     private readonly Mock<IProductRepository> _products = new();
     private readonly Mock<ICurrentTenantService> _tenant = new();
+    private readonly Mock<ICurrentUserService> _user = new();
+    private readonly Mock<IAuditLogRepository> _auditLogs = new();
     private readonly Guid _tenantId = Guid.NewGuid();
     private readonly ProductService _sut;
 
@@ -22,10 +24,13 @@ public class ProductServiceTests
     {
         _uow.SetupGet(x => x.Products).Returns(_products.Object);
         _tenant.SetupGet(x => x.TenantId).Returns(_tenantId);
+        _user.SetupGet(x => x.UserId).Returns(Guid.NewGuid());
 
         _sut = new ProductService(
             _uow.Object,
             _tenant.Object,
+            _user.Object,
+            _auditLogs.Object,
             new CreateProductRequestValidator(),
             new UpdateProductRequestValidator(),
             new AdjustStockRequestValidator());
@@ -135,6 +140,8 @@ public class ProductServiceTests
 
         Assert.Equal(7, result.Stock);
         _products.Verify(p => p.Update(It.Is<Product>(x => x.Stock == 7)), Times.Once);
+        _auditLogs.Verify(a => a.AddAsync(It.Is<AuditLog>(l =>
+            l.Action == "StockAdjust" && l.EntityId == id.ToString()), It.IsAny<CancellationToken>()), Times.Once);
         _uow.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 }

@@ -91,6 +91,14 @@ public sealed class AuthController : ControllerBase
         return NoContent();
     }
 
+    [HttpGet("me")]
+    [Authorize]
+    public async Task<ActionResult<CurrentUserDto>> Me(CancellationToken cancellationToken)
+    {
+        var result = await _authService.GetCurrentUserAsync(cancellationToken);
+        return Ok(result);
+    }
+
     /// <summary>
     /// Refresh token is delivered via HttpOnly cookie only — omit from JSON so XSS cannot read it from the response body.
     /// </summary>

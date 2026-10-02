@@ -32,9 +32,8 @@ export const BuildingSignup: React.FC<BuildingSignupProps> = ({
   const [adminEmail, setAdminEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [targetUnitId, setTargetUnitId] = useState<string>('u-304');
-  const [formGlassMode, setFormGlassMode] = useState<'frosted' | 'ultra-clear'>('frosted');
-  const [isManualFormHidden, setIsManualFormHidden] = useState(false);
+  const [targetUnitId, setTargetUnitId] = useState<string | null>(null);
+  const [formGlassMode] = useState<'frosted' | 'ultra-clear'>('frosted');
   const [errorMessage, setErrorMessage] = useState('');
   const [registeredTenantId, setRegisteredTenantId] = useState<string | null>(null);
 
@@ -42,54 +41,57 @@ export const BuildingSignup: React.FC<BuildingSignupProps> = ({
   const [stage, setStage] = useState<'idle' | 'scanning' | 'assigning' | 'completed'>('idle');
 
   // When stage is not idle (i.e. user submitted "Register & Assign Apartment Unit")
-  // or user manually toggled hide form, the form vanishes completely!
-  const isFormVanished = stage !== 'idle' || isManualFormHidden;
+  // the form vanishes completely!
+  const isFormVanished = stage !== 'idle';
 
-  // Initial 5 floors × 6 units = 30 apartments behind the form
+  // Decorative building grid — occupied units never expose tenant names
   const [apartments, setApartments] = useState<ApartmentUnit[]>([
-    // Level 05 - Penthouse & Cloud Node Level
-    { id: 'u-501', floor: 5, number: 1, label: 'P-501', status: 'occupied', tenant: 'Apex Robotics', lightHue: 'cyan', silhouetteType: 'servers' },
+    { id: 'u-501', floor: 5, number: 1, label: 'P-501', status: 'occupied', lightHue: 'cyan', silhouetteType: 'servers' },
     { id: 'u-502', floor: 5, number: 2, label: 'P-502', status: 'vacant', lightHue: 'cyan', silhouetteType: 'servers' },
-    { id: 'u-503', floor: 5, number: 3, label: 'P-503', status: 'occupied', tenant: 'CyberTech EU', lightHue: 'violet', silhouetteType: 'workstation' },
-    { id: 'u-504', floor: 5, number: 4, label: 'P-504', status: 'occupied', tenant: 'Orbital Mesh', lightHue: 'cyan', silhouetteType: 'person' },
+    { id: 'u-503', floor: 5, number: 3, label: 'P-503', status: 'occupied', lightHue: 'violet', silhouetteType: 'workstation' },
+    { id: 'u-504', floor: 5, number: 4, label: 'P-504', status: 'occupied', lightHue: 'cyan', silhouetteType: 'person' },
     { id: 'u-505', floor: 5, number: 5, label: 'P-505', status: 'vacant', lightHue: 'amber', silhouetteType: 'rack' },
-    { id: 'u-506', floor: 5, number: 6, label: 'P-506', status: 'occupied', tenant: 'Hyperion Labs', lightHue: 'violet', silhouetteType: 'servers' },
+    { id: 'u-506', floor: 5, number: 6, label: 'P-506', status: 'occupied', lightHue: 'violet', silhouetteType: 'servers' },
 
-    // Level 04 - High-Altitude Logistics Suite
-    { id: 'u-401', floor: 4, number: 1, label: 'U-401', status: 'occupied', tenant: 'Solarix Supply', lightHue: 'amber', silhouetteType: 'workstation' },
+    { id: 'u-401', floor: 4, number: 1, label: 'U-401', status: 'occupied', lightHue: 'amber', silhouetteType: 'workstation' },
     { id: 'u-402', floor: 4, number: 2, label: 'U-402', status: 'vacant', lightHue: 'cyan', silhouetteType: 'servers' },
-    { id: 'u-403', floor: 4, number: 3, label: 'U-403', status: 'occupied', tenant: 'AeroFreight Int.', lightHue: 'cyan', silhouetteType: 'servers' },
-    { id: 'u-404', floor: 4, number: 4, label: 'U-404', status: 'occupied', tenant: 'Quantum Sync', lightHue: 'violet', silhouetteType: 'workstation' },
+    { id: 'u-403', floor: 4, number: 3, label: 'U-403', status: 'occupied', lightHue: 'cyan', silhouetteType: 'servers' },
+    { id: 'u-404', floor: 4, number: 4, label: 'U-404', status: 'occupied', lightHue: 'violet', silhouetteType: 'workstation' },
     { id: 'u-405', floor: 4, number: 5, label: 'U-405', status: 'vacant', lightHue: 'amber', silhouetteType: 'person' },
-    { id: 'u-406', floor: 4, number: 6, label: 'U-406', status: 'occupied', tenant: 'Krono Express', lightHue: 'amber', silhouetteType: 'rack' },
+    { id: 'u-406', floor: 4, number: 6, label: 'U-406', status: 'occupied', lightHue: 'amber', silhouetteType: 'rack' },
 
-    // Level 03 - Core Enterprise Data Floor (Target Apartment sits here)
-    { id: 'u-301', floor: 3, number: 1, label: 'U-301', status: 'occupied', tenant: 'Vortex Cloud', lightHue: 'cyan', silhouetteType: 'servers' },
+    { id: 'u-301', floor: 3, number: 1, label: 'U-301', status: 'occupied', lightHue: 'cyan', silhouetteType: 'servers' },
     { id: 'u-302', floor: 3, number: 2, label: 'U-302', status: 'vacant', lightHue: 'cyan', silhouetteType: 'servers' },
-    { id: 'u-303', floor: 3, number: 3, label: 'U-303', status: 'occupied', tenant: 'Acme Global Store', lightHue: 'amber', silhouetteType: 'workstation' },
-    { id: 'u-304', floor: 3, number: 4, label: 'U-304', status: 'vacant', lightHue: 'amber', silhouetteType: 'rack' }, // Default assignment target
-    { id: 'u-305', floor: 3, number: 5, label: 'U-305', status: 'occupied', tenant: 'Titan Heavy Ltd', lightHue: 'violet', silhouetteType: 'servers' },
+    { id: 'u-303', floor: 3, number: 3, label: 'U-303', status: 'occupied', lightHue: 'amber', silhouetteType: 'workstation' },
+    { id: 'u-304', floor: 3, number: 4, label: 'U-304', status: 'vacant', lightHue: 'amber', silhouetteType: 'rack' },
+    { id: 'u-305', floor: 3, number: 5, label: 'U-305', status: 'occupied', lightHue: 'violet', silhouetteType: 'servers' },
     { id: 'u-306', floor: 3, number: 6, label: 'U-306', status: 'vacant', lightHue: 'amber', silhouetteType: 'person' },
 
-    // Level 02 - Mid-Tier Operations Floor
     { id: 'u-201', floor: 2, number: 1, label: 'U-201', status: 'vacant', lightHue: 'amber', silhouetteType: 'servers' },
-    { id: 'u-202', floor: 2, number: 2, label: 'U-202', status: 'occupied', tenant: 'OmniWare Labs', lightHue: 'cyan', silhouetteType: 'rack' },
+    { id: 'u-202', floor: 2, number: 2, label: 'U-202', status: 'occupied', lightHue: 'cyan', silhouetteType: 'rack' },
     { id: 'u-203', floor: 2, number: 3, label: 'U-203', status: 'vacant', lightHue: 'violet', silhouetteType: 'servers' },
-    { id: 'u-204', floor: 2, number: 4, label: 'U-204', status: 'occupied', tenant: 'Vector Logistics', lightHue: 'amber', silhouetteType: 'workstation' },
-    { id: 'u-205', floor: 2, number: 5, label: 'U-205', status: 'occupied', tenant: 'Synthetix Corp', lightHue: 'cyan', silhouetteType: 'person' },
+    { id: 'u-204', floor: 2, number: 4, label: 'U-204', status: 'occupied', lightHue: 'amber', silhouetteType: 'workstation' },
+    { id: 'u-205', floor: 2, number: 5, label: 'U-205', status: 'occupied', lightHue: 'cyan', silhouetteType: 'person' },
     { id: 'u-206', floor: 2, number: 6, label: 'U-206', status: 'vacant', lightHue: 'cyan', silhouetteType: 'servers' },
 
-    // Level 01 - Bulkhead Dispatch & Ground Hub
-    { id: 'u-101', floor: 1, number: 1, label: 'G-101', status: 'occupied', tenant: 'Ground Dock 1A', lightHue: 'amber', silhouetteType: 'rack' },
-    { id: 'u-102', floor: 1, number: 2, label: 'G-102', status: 'occupied', tenant: 'Security Center', lightHue: 'cyan', silhouetteType: 'person' },
+    { id: 'u-101', floor: 1, number: 1, label: 'G-101', status: 'occupied', lightHue: 'amber', silhouetteType: 'rack' },
+    { id: 'u-102', floor: 1, number: 2, label: 'G-102', status: 'occupied', lightHue: 'cyan', silhouetteType: 'person' },
     { id: 'u-103', floor: 1, number: 3, label: 'G-103', status: 'vacant', lightHue: 'violet', silhouetteType: 'servers' },
-    { id: 'u-104', floor: 1, number: 4, label: 'G-104', status: 'occupied', tenant: 'Central Dispatch Hub', lightHue: 'amber', silhouetteType: 'servers' },
+    { id: 'u-104', floor: 1, number: 4, label: 'G-104', status: 'occupied', lightHue: 'amber', silhouetteType: 'servers' },
     { id: 'u-105', floor: 1, number: 5, label: 'G-105', status: 'vacant', lightHue: 'cyan', silhouetteType: 'workstation' },
-    { id: 'u-106', floor: 1, number: 6, label: 'G-106', status: 'occupied', tenant: 'Fiber Gateway 01', lightHue: 'amber', silhouetteType: 'rack' },
+    { id: 'u-106', floor: 1, number: 6, label: 'G-106', status: 'occupied', lightHue: 'amber', silhouetteType: 'rack' },
   ]);
 
   const vacantUnits = apartments.filter((u) => u.status === 'vacant' || u.status === 'target');
-  const assignedUnit = apartments.find((u) => u.id === targetUnitId) || apartments[0];
+  const assignedUnit = targetUnitId
+    ? apartments.find((u) => u.id === targetUnitId)
+    : undefined;
+
+  const pickRandomVacantUnitId = (): string | null => {
+    const vacant = apartments.filter((u) => u.status === 'vacant');
+    if (vacant.length === 0) return null;
+    return vacant[Math.floor(Math.random() * vacant.length)]!.id;
+  };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,12 +103,19 @@ export const BuildingSignup: React.FC<BuildingSignupProps> = ({
       return;
     }
 
+    const randomUnitId = pickRandomVacantUnitId();
+    if (!randomUnitId) {
+      setErrorMessage('No vacant units available. Please try again later.');
+      return;
+    }
+
     const nameParts = adminName.trim().split(/\s+/);
     const firstName = nameParts[0] || 'Admin';
     const lastName = nameParts.slice(1).join(' ') || 'User';
 
     if (onStateChange) onStateChange('building');
     setStage('scanning');
+    setTargetUnitId(randomUnitId);
 
     try {
       const auth = await registerTenant({
@@ -120,13 +129,13 @@ export const BuildingSignup: React.FC<BuildingSignupProps> = ({
 
       setStage('assigning');
       setApartments((prev) =>
-        prev.map((u) => (u.id === targetUnitId ? { ...u, status: 'target' } : u))
+        prev.map((u) => (u.id === randomUnitId ? { ...u, status: 'target' } : u))
       );
 
       setTimeout(() => {
         setApartments((prev) =>
           prev.map((u) =>
-            u.id === targetUnitId
+            u.id === randomUnitId
               ? {
                   ...u,
                   status: 'assigned',
@@ -144,6 +153,7 @@ export const BuildingSignup: React.FC<BuildingSignupProps> = ({
       }, 1600);
     } catch (err) {
       setStage('idle');
+      setTargetUnitId(null);
       setErrorMessage(
         err instanceof ApiError
           ? err.message
@@ -180,35 +190,34 @@ export const BuildingSignup: React.FC<BuildingSignupProps> = ({
           }`}
         >
           {/* Building Rooftop / Crown Architecture */}
-          <div className="w-full flex items-end justify-between px-6 pb-2 border-b border-white/10 relative">
-            {/* Left Antenna Mast */}
-            <div className="flex items-end gap-3">
-              <div className="flex flex-col items-center">
-                <div className="w-1.5 h-1.5 rounded-full bg-[#EF4444] animate-ping" />
-                <div className="w-0.5 h-10 bg-gradient-to-t from-white/30 to-[#EF4444]" />
-                <div className="w-3 h-1 bg-white/20" />
-              </div>
-              <div>
-                <span className="font-mono text-[11px] font-bold tracking-widest text-[#82cfff] uppercase flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse" />
+          <div className="w-full flex items-end justify-between px-4 sm:px-6 pb-2 border-b border-white/10 relative">
+            <div className="flex items-end gap-3 min-w-0">
+              <button
+                type="button"
+                onClick={() => onNavigate('landing')}
+                className="shrink-0 mb-1 w-8 h-8 flex items-center justify-center rounded-lg text-[#94A3B8] hover:text-white hover:bg-white/10 transition-all cursor-pointer pointer-events-auto"
+                title="Back"
+                aria-label="Back"
+              >
+                <span className="text-base font-medium leading-none">&lt;</span>
+              </button>
+              <div className="min-w-0">
+                <span className="font-mono text-[11px] font-bold tracking-widest text-[#82cfff] uppercase block truncate">
                   VAULT TOWER // FACILITY 07
                 </span>
-                <span className="font-mono text-[9px] text-[#64748B] block">
+                <span className="font-mono text-[9px] text-[#64748B] block truncate">
                   LAT 37.7749° N • LON 122.4194° W • HIGH-AVAILABILITY CLUSTER
                 </span>
               </div>
             </div>
 
-            {/* Live Building Status Indicator */}
-            <div className="flex items-center gap-4 text-[10px] font-mono">
-              <div className="flex items-center gap-1.5 text-[#F59E0B]">
-                <span className="w-2 h-2 rounded-full bg-[#F59E0B] shadow-[0_0_8px_rgba(245,158,11,0.8)]" />
-                <span>OCCUPIED ({apartments.filter((a) => a.status === 'occupied' || a.status === 'assigned').length})</span>
-              </div>
-              <div className="flex items-center gap-1.5 text-[#82cfff]">
-                <span className="w-2 h-2 rounded-full border border-[#82cfff] shadow-[0_0_6px_rgba(130,207,255,0.4)]" />
-                <span>VACANT ({apartments.filter((a) => a.status === 'vacant' || a.status === 'target').length})</span>
-              </div>
+            <div className="hidden sm:flex items-center gap-4 text-[10px] font-mono shrink-0">
+              <span className="text-[#F59E0B]">
+                OCCUPIED ({apartments.filter((a) => a.status === 'occupied' || a.status === 'assigned').length})
+              </span>
+              <span className="text-[#82cfff]">
+                VACANT ({apartments.filter((a) => a.status === 'vacant' || a.status === 'target').length})
+              </span>
             </div>
 
             {/* Right Antenna Mast */}
@@ -248,7 +257,7 @@ export const BuildingSignup: React.FC<BuildingSignupProps> = ({
                     {/* Apartment Units Row */}
                     <div className="grid grid-cols-6 gap-2 sm:gap-3">
                       {floorUnits.map((unit) => {
-                        const isThisTarget = unit.id === targetUnitId;
+                        const isThisTarget = targetUnitId !== null && unit.id === targetUnitId;
                         const isAssigned = unit.status === 'assigned';
                         const isOccupied = unit.status === 'occupied' || isAssigned;
                         const isTargeting = unit.status === 'target' || (isThisTarget && stage === 'assigning');
@@ -256,28 +265,21 @@ export const BuildingSignup: React.FC<BuildingSignupProps> = ({
                         return (
                           <div
                             key={unit.id}
-                            onClick={() => {
-                              if (unit.status === 'vacant' && stage === 'idle') {
-                                setTargetUnitId(unit.id);
-                              }
-                            }}
                             title={
                               isAssigned
-                                ? `★ Assigned to: ${companyName}`
+                                ? `Assigned to your workspace`
                                 : isOccupied
-                                ? `Occupied by: ${unit.tenant}`
-                                : `Vacant: Click to select ${unit.label}`
+                                ? 'Occupied'
+                                : 'Vacant'
                             }
-                            className={`relative h-20 sm:h-24 rounded-xl border transition-all duration-700 p-1.5 flex flex-col justify-between overflow-visible cursor-pointer ${
+                            className={`relative h-20 sm:h-24 rounded-xl border transition-all duration-700 p-1.5 flex flex-col justify-between overflow-visible ${
                               isAssigned
                                 ? 'bg-gradient-to-b from-[#F59E0B]/45 to-[#F59E0B]/15 border-[#F59E0B] shadow-[0_0_40px_rgba(245,158,11,0.9)] scale-[1.06] z-30 ring-2 ring-[#F59E0B]'
                                 : isTargeting
                                 ? 'border-[#82cfff] bg-[#82cfff]/25 shadow-[0_0_35px_rgba(130,207,255,0.7)] animate-pulse scale-[1.03] z-20 ring-2 ring-[#82cfff]/60'
-                                : isThisTarget && stage === 'idle'
-                                ? 'border-[#82cfff]/70 bg-[#82cfff]/15 shadow-[0_0_20px_rgba(130,207,255,0.3)] ring-1 ring-[#82cfff]/50'
                                 : isOccupied
-                                ? 'bg-[#0b101c]/90 border-white/10 hover:border-white/25'
-                                : 'bg-[#080d18]/60 border-dashed border-white/10 hover:border-[#82cfff]/50 hover:bg-[#82cfff]/10'
+                                ? 'bg-[#0b101c]/90 border-white/10'
+                                : 'bg-[#080d18]/60 border-dashed border-white/10'
                             }`}
                           >
                             {/* Floating Callout Badge above Newly Assigned Apartment */}
@@ -390,23 +392,23 @@ export const BuildingSignup: React.FC<BuildingSignupProps> = ({
                               )}
                             </div>
 
-                            {/* Tenant Ribbon / Sub-label */}
+                            {/* Status ribbon — never expose other tenant names */}
                             <div className="pt-0.5 truncate text-center">
                               {isAssigned ? (
                                 <span className="font-mono text-[8px] sm:text-[9px] text-[#F59E0B] font-bold truncate block animate-pulse">
-                                  ★ {companyName || 'Assigned'}
+                                  ★ Your Unit
                                 </span>
-                              ) : isThisTarget ? (
+                              ) : isTargeting ? (
                                 <span className="font-mono text-[7px] sm:text-[8px] text-[#82cfff] font-bold uppercase truncate block">
-                                  &gt; Target Slot
+                                  Assigning…
                                 </span>
                               ) : isOccupied ? (
-                                <span className="text-[7px] sm:text-[8px] text-[#94A3B8] truncate block">
-                                  {unit.tenant}
+                                <span className="text-[7px] sm:text-[8px] text-[#94A3B8] truncate block uppercase tracking-wide">
+                                  Occupied
                                 </span>
                               ) : (
-                                <span className="text-[7px] font-mono text-[#475569] block">
-                                  Select Slot
+                                <span className="text-[7px] font-mono text-[#475569] block uppercase">
+                                  Vacant
                                 </span>
                               )}
                             </div>
@@ -455,7 +457,7 @@ export const BuildingSignup: React.FC<BuildingSignupProps> = ({
               </span>
               <div>
                 <span className="font-mono text-xs font-bold text-[#F59E0B] tracking-wider block">
-                  LOCKING UNIT {assignedUnit.label} // SYNCING TENANT MESH
+                  LOCKING UNIT {assignedUnit?.label ?? '—'} // SYNCING TENANT MESH
                 </span>
                 <span className="font-mono text-[10px] text-[#94A3B8]">
                   Subdomain: {workspaceSlug}.vault-os.net
@@ -467,7 +469,7 @@ export const BuildingSignup: React.FC<BuildingSignupProps> = ({
               <div className="w-3.5 h-3.5 rounded-full bg-[#10B981] shadow-[0_0_12px_#10B981]" />
               <div>
                 <span className="font-mono text-xs font-bold text-white tracking-wider block">
-                  UNIT {assignedUnit.label} ACTIVATED & ASSIGNED TO {companyName.toUpperCase()}
+                  UNIT {assignedUnit?.label ?? '—'} ACTIVATED & ASSIGNED TO {companyName.toUpperCase()}
                 </span>
                 <span className="font-mono text-[10px] text-[#10B981]">
                   Tenant Provisioned • Redirecting to Console...
@@ -486,37 +488,7 @@ export const BuildingSignup: React.FC<BuildingSignupProps> = ({
       )}
 
       {/* ========================================================================= */}
-      {/* 3. TOP FLOATING NAVIGATION & BACK BUTTON                                  */}
-      {/* ========================================================================= */}
-      <div className="fixed top-6 left-6 z-40 flex items-center gap-3">
-        <button
-          onClick={() => onNavigate('landing')}
-          className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-black/40 hover:bg-black/70 text-xs font-mono text-[#94A3B8] hover:text-white border border-white/15 backdrop-blur-xl transition-all shadow-lg cursor-pointer"
-        >
-          <span className="material-symbols-outlined text-[16px]">arrow_back</span>
-          <span>Back to Landing</span>
-        </button>
-
-        {/* View Building / Toggle Form Visibility */}
-        <button
-          type="button"
-          onClick={() => setIsManualFormHidden(!isManualFormHidden)}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-mono border backdrop-blur-xl transition-all shadow-lg cursor-pointer ${
-            isManualFormHidden
-              ? 'bg-[#82cfff]/20 text-[#82cfff] border-[#82cfff]/50'
-              : 'bg-black/40 hover:bg-black/70 text-[#94A3B8] hover:text-white border-white/15'
-          }`}
-          title={isManualFormHidden ? 'Show form console' : 'Hide form to clearly view the full building'}
-        >
-          <span className="material-symbols-outlined text-[15px]">
-            {isManualFormHidden ? 'visibility' : 'visibility_off'}
-          </span>
-          <span>{isManualFormHidden ? 'Show Form' : 'View Full Building'}</span>
-        </button>
-      </div>
-
-      {/* ========================================================================= */}
-      {/* 4. FOREGROUND TRANSPARENT REGISTRATION FORM                               */}
+      {/* 3. FOREGROUND TRANSPARENT REGISTRATION FORM                               */}
       {/* (VANISHES COMPLETELY UPON CLICKING "REGISTER & ASSIGN APARTMENT UNIT")     */}
       {/* ========================================================================= */}
       <div
@@ -539,12 +511,6 @@ export const BuildingSignup: React.FC<BuildingSignupProps> = ({
               <span className="material-symbols-outlined text-[#82cfff] text-[20px]">apartment</span>
               <span className="font-mono text-[11px] font-semibold uppercase tracking-wider text-[#82cfff]">
                 TENANT PROVISIONING
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-[10px] text-[#10B981] px-2.5 py-0.5 rounded-full bg-[#10B981]/20 border border-[#10B981]/40 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-ping" />
-                {vacantUnits.length} UNITS VACANT
               </span>
             </div>
           </div>
@@ -667,19 +633,35 @@ export const BuildingSignup: React.FC<BuildingSignupProps> = ({
               </div>
             </div>
 
-            {/* DESIGNATED APARTMENT SLOT INDICATOR & QUICK SELECTOR */}
+            {/* RANDOM APARTMENT ALLOCATION NOTICE */}
             <div className="p-3 rounded-2xl bg-black/35 border border-white/15 backdrop-blur-sm flex flex-col gap-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                   <span className="material-symbols-outlined text-[#F59E0B] text-[20px]">
-                    {stage === 'completed' ? 'verified' : 'roofing'}
+                    {stage === 'completed' ? 'verified' : 'shuffle'}
                   </span>
                   <div>
                     <span className="text-white font-medium block">
-                      Target Apartment: <strong className="text-[#82cfff] font-mono">{assignedUnit.label}</strong>
+                      {stage === 'completed' && assignedUnit ? (
+                        <>
+                          Assigned Unit:{' '}
+                          <strong className="text-[#82cfff] font-mono">{assignedUnit.label}</strong>
+                        </>
+                      ) : stage === 'assigning' && assignedUnit ? (
+                        <>
+                          Allocating:{' '}
+                          <strong className="text-[#82cfff] font-mono">{assignedUnit.label}</strong>
+                        </>
+                      ) : (
+                        <>Unit assigned at random</>
+                      )}
                     </span>
                     <span className="text-[#94A3B8] text-[10px] font-mono">
-                      Floor 0{assignedUnit.floor} • High-Bandwidth Dedicated Unit
+                      {stage === 'idle'
+                        ? `${vacantUnits.length} available • assigned automatically on register`
+                        : assignedUnit
+                          ? `Floor 0${assignedUnit.floor} • High-Bandwidth Dedicated Unit`
+                          : 'Provisioning…'}
                     </span>
                   </div>
                 </div>
@@ -697,32 +679,9 @@ export const BuildingSignup: React.FC<BuildingSignupProps> = ({
                     ? 'LEASED'
                     : stage === 'assigning'
                     ? 'ALLOCATING'
-                    : 'READY'}
+                    : 'AUTO'}
                 </span>
               </div>
-
-              {/* Selector for other vacant apartments in building */}
-              {stage === 'idle' && (
-                <div className="pt-2 border-t border-white/10 flex items-center justify-between text-[11px]">
-                  <span className="text-[#94A3B8]">Select different vacant unit:</span>
-                  <div className="flex items-center gap-1.5 overflow-x-auto max-w-[240px] pb-0.5">
-                    {vacantUnits.map((u) => (
-                      <button
-                        key={u.id}
-                        type="button"
-                        onClick={() => setTargetUnitId(u.id)}
-                        className={`px-2 py-0.5 rounded text-[10px] font-mono transition-all cursor-pointer ${
-                          u.id === targetUnitId
-                            ? 'bg-[#82cfff] text-black font-bold shadow-[0_0_8px_rgba(130,207,255,0.7)]'
-                            : 'bg-white/10 text-white/70 hover:bg-white/20'
-                        }`}
-                      >
-                        {u.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* SUBMIT BUTTON */}
@@ -739,13 +698,13 @@ export const BuildingSignup: React.FC<BuildingSignupProps> = ({
           {/* Switch to Login Link */}
           <div className="mt-5 pt-4 border-t border-white/10 text-center">
             <p className="text-xs text-[#94A3B8]">
-              Already have an assigned unit?{' '}
+              Already have an account?{' '}
               <button
                 type="button"
                 onClick={() => onNavigate('login')}
                 className="text-[#82cfff] hover:text-white font-medium underline underline-offset-4 decoration-[#82cfff]/40 transition-colors cursor-pointer"
               >
-                Enter through Locked Shutter →
+                Log in →
               </button>
             </p>
           </div>

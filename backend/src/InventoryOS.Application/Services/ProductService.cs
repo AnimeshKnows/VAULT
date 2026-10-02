@@ -1,3 +1,4 @@
+using System.Text.Json;
 using FluentValidation;
 using InventoryOS.Application.DTOs.Common;
 using InventoryOS.Application.DTOs.Products;
@@ -13,6 +14,8 @@ public sealed class ProductService : IProductService
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentTenantService _currentTenant;
+    private readonly ICurrentUserService _currentUser;
+    private readonly IAuditLogRepository _auditLogs;
     private readonly IValidator<CreateProductRequest> _createValidator;
     private readonly IValidator<UpdateProductRequest> _updateValidator;
     private readonly IValidator<AdjustStockRequest> _adjustValidator;
@@ -20,12 +23,16 @@ public sealed class ProductService : IProductService
     public ProductService(
         IUnitOfWork unitOfWork,
         ICurrentTenantService currentTenant,
+        ICurrentUserService currentUser,
+        IAuditLogRepository auditLogs,
         IValidator<CreateProductRequest> createValidator,
         IValidator<UpdateProductRequest> updateValidator,
         IValidator<AdjustStockRequest> adjustValidator)
     {
         _unitOfWork = unitOfWork;
         _currentTenant = currentTenant;
+        _currentUser = currentUser;
+        _auditLogs = auditLogs;
         _createValidator = createValidator;
         _updateValidator = updateValidator;
         _adjustValidator = adjustValidator;
@@ -129,7 +136,8 @@ public sealed class ProductService : IProductService
         var product = await _unitOfWork.Products.GetByIdAsync(id, cancellationToken)
             ?? throw new NotFoundException(nameof(Product), id);
 
-        var newStock = product.Stock + request.QuantityDelta;
+        var previousStock = product.Stock;
+        var newStock = previousStock + request.QuantityDelta;
         if (newStock < 0)
         {
             throw new DomainValidationException($"Insufficient stock. Current stock is {product.Stock}.");
@@ -137,6 +145,31 @@ public sealed class ProductService : IProductService
 
         product.Stock = newStock;
         _unitOfWork.Products.Update(product);
+
+        if (_currentTenant.TenantId.HasValue)
+        {
+            var details = JsonSerializer.Serialize(new
+            {
+                sku = product.Sku,
+                name = product.Name,
+                delta = request.QuantityDelta,
+                reason = request.Reason,
+                previousStock,
+                newStock
+            });
+
+            await _auditLogs.AddAsync(new AuditLog
+            {
+                TenantId = _currentTenant.TenantId.Value,
+                UserId = _currentUser.UserId,
+                Action = "StockAdjust",
+                EntityName = nameof(Product),
+                EntityId = product.Id.ToString(),
+                Details = details,
+                Timestamp = DateTime.UtcNow
+            }, cancellationToken);
+        }
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return product.ToDto();
     }

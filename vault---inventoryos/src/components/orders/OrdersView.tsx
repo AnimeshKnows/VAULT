@@ -82,12 +82,9 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#1c2029] border border-white/5 text-[11px] font-mono text-[#94A3B8]">
-              <span className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse" />
-              <span className="text-white font-medium">SYNC ONLINE</span>
-              <span>|</span>
-              <span>{orders.length} TOTAL ENTRIES</span>
-            </div>
+            <span className="hidden sm:inline text-[11px] font-mono text-[#94A3B8]">
+              {orders.length} orders
+            </span>
 
             <button
               onClick={onOpenCreateOrder}
@@ -443,7 +440,7 @@ export const OrdersView: React.FC<OrdersViewProps> = ({
                   </span>
                 </div>
                 <p className="text-xs text-[#94A3B8] mt-1 font-mono">
-                  Ledger: {selectedOrderDetails.ledgerBlock}
+                  Created: {selectedOrderDetails.createdAt}
                 </p>
               </div>
               <button

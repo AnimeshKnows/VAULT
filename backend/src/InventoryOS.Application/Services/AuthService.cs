@@ -16,6 +16,7 @@ public sealed class AuthService : IAuthService
     private readonly IValidator<RegisterRequest> _registerValidator;
     private readonly IValidator<LoginRequest> _loginValidator;
     private readonly ICurrentTenantService _currentTenant;
+    private readonly ICurrentUserService _currentUser;
 
     public AuthService(
         IUnitOfWork unitOfWork,
@@ -24,7 +25,8 @@ public sealed class AuthService : IAuthService
         IPasswordHasherService passwordHasher,
         IValidator<RegisterRequest> registerValidator,
         IValidator<LoginRequest> loginValidator,
-        ICurrentTenantService currentTenant)
+        ICurrentTenantService currentTenant,
+        ICurrentUserService currentUser)
     {
         _unitOfWork = unitOfWork;
         _users = users;
@@ -33,6 +35,7 @@ public sealed class AuthService : IAuthService
         _registerValidator = registerValidator;
         _loginValidator = loginValidator;
         _currentTenant = currentTenant;
+        _currentUser = currentUser;
     }
 
     public async Task<AuthResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
@@ -90,4 +93,24 @@ public sealed class AuthService : IAuthService
 
     public Task LogoutAsync(RefreshTokenRequest request, CancellationToken cancellationToken = default)
         => _tokenService.RevokeRefreshTokenAsync(request.RefreshToken, cancellationToken);
+
+    public async Task<CurrentUserDto> GetCurrentUserAsync(CancellationToken cancellationToken = default)
+    {
+        if (!_currentUser.UserId.HasValue || _currentUser.UserId == Guid.Empty)
+        {
+            throw new UnauthorizedException("User context is required.");
+        }
+
+        var user = await _users.GetByIdAsync(_currentUser.UserId.Value, cancellationToken)
+            ?? throw new NotFoundException(nameof(User), _currentUser.UserId.Value);
+
+        return new CurrentUserDto(
+            user.Id,
+            user.TenantId,
+            user.Email,
+            user.FirstName,
+            user.LastName,
+            user.Role.ToString(),
+            user.IsActive);
+    }
 }

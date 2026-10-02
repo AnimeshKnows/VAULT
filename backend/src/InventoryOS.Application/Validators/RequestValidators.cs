@@ -2,6 +2,9 @@ using FluentValidation;
 using InventoryOS.Application.DTOs.Auth;
 using InventoryOS.Application.DTOs.Orders;
 using InventoryOS.Application.DTOs.Products;
+using InventoryOS.Application.DTOs.Tenants;
+using InventoryOS.Application.DTOs.Users;
+using InventoryOS.Domain.Enums;
 
 namespace InventoryOS.Application.Validators;
 
@@ -75,5 +78,35 @@ public sealed class CreateOrderRequestValidator : AbstractValidator<CreateOrderR
             item.RuleFor(i => i.ProductId).NotEmpty();
             item.RuleFor(i => i.Quantity).GreaterThan(0);
         });
+    }
+}
+
+public sealed class UpdateTenantRequestValidator : AbstractValidator<UpdateTenantRequest>
+{
+    public UpdateTenantRequestValidator()
+    {
+        RuleFor(x => x.Name).NotEmpty().MaximumLength(100);
+    }
+}
+
+public sealed class CreateUserRequestValidator : AbstractValidator<CreateUserRequest>
+{
+    public CreateUserRequestValidator()
+    {
+        RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(256);
+        RuleFor(x => x.Password).NotEmpty().MinimumLength(8).MaximumLength(128);
+        RuleFor(x => x.FirstName).NotEmpty().MaximumLength(100);
+        RuleFor(x => x.LastName).NotEmpty().MaximumLength(100);
+        RuleFor(x => x.Role).IsInEnum().Must(r => r is Role.Admin or Role.Staff);
+    }
+}
+
+public sealed class UpdateUserRequestValidator : AbstractValidator<UpdateUserRequest>
+{
+    public UpdateUserRequestValidator()
+    {
+        RuleFor(x => x.FirstName).NotEmpty().MaximumLength(100);
+        RuleFor(x => x.LastName).NotEmpty().MaximumLength(100);
+        RuleFor(x => x.Role).IsInEnum().Must(r => r is Role.Admin or Role.Staff);
     }
 }

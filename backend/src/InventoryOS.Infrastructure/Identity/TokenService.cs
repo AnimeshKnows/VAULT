@@ -151,4 +151,25 @@ public sealed class TokenService : ITokenService
         existing.RevokedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync(cancellationToken);
     }
+
+    public async Task RevokeAllRefreshTokensForUserAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        var tokens = await _context.RefreshTokens
+            .IgnoreQueryFilters()
+            .Where(t => t.UserId == userId && t.RevokedAt == null)
+            .ToListAsync(cancellationToken);
+
+        if (tokens.Count == 0)
+        {
+            return;
+        }
+
+        var now = DateTime.UtcNow;
+        foreach (var token in tokens)
+        {
+            token.RevokedAt = now;
+        }
+
+        await _context.SaveChangesAsync(cancellationToken);
+    }
 }
